@@ -15,28 +15,11 @@
 
 PG_MODULE_MAGIC;
 
-static void
-pg_decode_startup(LogicalDecodingContext *ctx, OutputPluginOptions *opt, bool is_init)
-{
-	opt->output_type = OUTPUT_PLUGIN_TEXTUAL_OUTPUT;
-}
-
-static void
-pg_decode_shutdown(LogicalDecodingContext *ctx)
-{
-}
-
-static void
-pg_decode_begin_txn(LogicalDecodingContext *ctx, ReorderBufferTXN *txn)
-{
-}
-
-void
-pg_decode_commit_txn(LogicalDecodingContext *ctx, ReorderBufferTXN *txn, XLogRecPtr commit_lsn)
-{
-}
-
-static void pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn, Relation relation, ReorderBufferChange *change);
+void pg_decode_startup(LogicalDecodingContext *ctx, OutputPluginOptions *opt, bool is_init);
+void pg_decode_shutdown(LogicalDecodingContext *ctx);
+void pg_decode_begin_txn(LogicalDecodingContext *ctx, ReorderBufferTXN *txn);
+void pg_decode_commit_txn(LogicalDecodingContext *ctx, ReorderBufferTXN *txn, XLogRecPtr commit_lsn);
+void pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn, Relation relation, ReorderBufferChange *change);
 
 void
 _PG_output_plugin_init(OutputPluginCallbacks *cb)
