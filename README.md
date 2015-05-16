@@ -10,3 +10,6 @@ rustc 1.0.0 (a59de37e9 2015-05-13) (built 2015-05-14)
 * You must use no_mangle, pub, and extern in order for the rust function to be callable from C.
 
 * Once you've got your rust .dylib file, you just compile the c program normally. All of the loading is handled at runtime. `gcc c.c -o main`
+
+* `run` is the script that we used to prototype calling between Rust and C
+* `plubin` is the script that we used to compile and test the Postgres Output Decoder
