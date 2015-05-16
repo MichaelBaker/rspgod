@@ -40,7 +40,7 @@ static void
 pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn, Relation relation, ReorderBufferChange *change)
 {
 	OutputPluginPrepareWrite(ctx, true);
-  appendStringInfoString(ctx->out, "OUTPUT FROM PLUGIN");
+  appendStringInfoString(ctx->out, "OUTPUT FROM PLUGIN THINGY");
 	OutputPluginWrite(ctx, true);
 }
 
