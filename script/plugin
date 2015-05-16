@@ -7,10 +7,13 @@ rm -f *.so
 rm -f *.dylib
 rm -f *.a
 
+# gcc plugin.c -c -o plugin.o -I /usr/local/Cellar/postgresql/9.4.1/include/server -I /usr/local/Cellar/postgresql/9.4.1/include/internal
+# gcc plugin_two.c -c -o plugin.o -I /usr/local/Cellar/postgresql/9.4.1/include/server -I /usr/local/Cellar/postgresql/9.4.1/include/internal
+
 make --debug=v
 make install
 
-# psql -c $'select pg_drop_replication_slot(\'slot\')'
+psql -c $'select pg_drop_replication_slot(\'slot\')'
 psql -c $'select * from pg_create_logical_replication_slot(\'slot\', \'thingy\')'
 psql -c $'insert into test (name, age) values (\'my_name\', 89)'
 psql -c $'SELECT * FROM pg_logical_slot_peek_changes(\'slot\', NULL, NULL)'

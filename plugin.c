@@ -31,18 +31,8 @@ pg_decode_begin_txn(LogicalDecodingContext *ctx, ReorderBufferTXN *txn)
 {
 }
 
-static void
-pg_decode_commit_txn(LogicalDecodingContext *ctx, ReorderBufferTXN *txn, XLogRecPtr commit_lsn)
-{
-}
-
-static void
-pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn, Relation relation, ReorderBufferChange *change)
-{
-	OutputPluginPrepareWrite(ctx, true);
-  appendStringInfoString(ctx->out, "OUTPUT FROM PLUGIN THINGY");
-	OutputPluginWrite(ctx, true);
-}
+void pg_decode_commit_txn(LogicalDecodingContext *ctx, ReorderBufferTXN *txn, XLogRecPtr commit_lsn);
+void pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn, Relation relation, ReorderBufferChange *change);
 
 void
 _PG_output_plugin_init(OutputPluginCallbacks *cb)
