@@ -7,9 +7,6 @@ rm -f *.so
 rm -f *.dylib
 rm -f *.a
 
-# gcc plugin.c -c -o plugin.o -I /usr/local/Cellar/postgresql/9.4.1/include/server -I /usr/local/Cellar/postgresql/9.4.1/include/internal
-# gcc plugin_two.c -c -o plugin.o -I /usr/local/Cellar/postgresql/9.4.1/include/server -I /usr/local/Cellar/postgresql/9.4.1/include/internal
-
 make --debug=v
 make install
 

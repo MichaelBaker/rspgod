@@ -31,8 +31,22 @@ pg_decode_begin_txn(LogicalDecodingContext *ctx, ReorderBufferTXN *txn)
 {
 }
 
-void pg_decode_commit_txn(LogicalDecodingContext *ctx, ReorderBufferTXN *txn, XLogRecPtr commit_lsn);
-void pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn, Relation relation, ReorderBufferChange *change);
+void
+pg_decode_commit_txn(LogicalDecodingContext *ctx, ReorderBufferTXN *txn, XLogRecPtr commit_lsn)
+{
+}
+
+int add_two(int);
+
+static void
+pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn, Relation relation, ReorderBufferChange *change)
+{
+	OutputPluginPrepareWrite(ctx, true);
+	char str[100];
+	sprintf(str, "OUTPUT FROM RUST %d", add_two(5));
+  appendStringInfoString(ctx->out, str);
+	OutputPluginWrite(ctx, true);
+}
 
 void
 _PG_output_plugin_init(OutputPluginCallbacks *cb)
