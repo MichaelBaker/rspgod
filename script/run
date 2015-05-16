@@ -1,7 +1,0 @@
-#!/usr/bin/env bash
-
-rm librust.dylib
-rm main
-rustc rust.rs --crate-type=dylib
-gcc c.c -o main
-./main
