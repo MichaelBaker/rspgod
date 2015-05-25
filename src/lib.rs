@@ -9,7 +9,14 @@ extern crate libc;
 use std::ffi::CString;
 mod postgres;
 
-use postgres::{LogicalDecodingContext, OutputPluginOptions, OUTPUT_PLUGIN_TEXTUAL_OUTPUT};
+use postgres::{
+    LogicalDecodingContext,
+    OutputPluginOptions,
+    OUTPUT_PLUGIN_TEXTUAL_OUTPUT,
+    ReorderBufferTXN,
+    Relation,
+    ReorderBufferChange,
+};
 
 extern {
   fn OutputPluginPrepareWrite(ctx: &LogicalDecodingContext, last_write: bool);
@@ -17,16 +24,14 @@ extern {
   fn appendStringInfoString(str: *mut postgres::Struct_StringInfoData, s: *const i8);
 }
 
-pub struct DontTouch;
-
 #[no_mangle]
 pub extern fn pg_decode_startup(ctx: &LogicalDecodingContext, opt: &mut OutputPluginOptions, is_init: bool) {
 	opt.output_type = OUTPUT_PLUGIN_TEXTUAL_OUTPUT;
 }
 
 #[no_mangle]
-pub extern fn pg_decode_change(ctx: &LogicalDecodingContext, a: &DontTouch, b: &DontTouch, c: &DontTouch) {
-    let to_print = &b"OMG, world! -- rust"[..];
+pub extern fn pg_decode_change(ctx: &LogicalDecodingContext, txn: &ReorderBufferTXN, relation: &Relation, change: &ReorderBufferChange) {
+    let to_print = &b"WAT, world! -- rust"[..];
     let c_to_print = CString::new(to_print).unwrap();
 
     unsafe {
@@ -37,11 +42,11 @@ pub extern fn pg_decode_change(ctx: &LogicalDecodingContext, a: &DontTouch, b: &
 }
 
 #[no_mangle]
-pub extern fn pg_decode_commit_txn(ctx: &LogicalDecodingContext, txn: &DontTouch, commit_lsn: u64) {
+pub extern fn pg_decode_commit_txn(ctx: &LogicalDecodingContext, txn: &ReorderBufferTXN, commit_lsn: u64) {
 }
 
 #[no_mangle]
-pub extern fn pg_decode_begin_txn(ctx: &LogicalDecodingContext, txn: &DontTouch) {
+pub extern fn pg_decode_begin_txn(ctx: &LogicalDecodingContext, txn: &ReorderBufferTXN) {
 }
 
 #[no_mangle]
