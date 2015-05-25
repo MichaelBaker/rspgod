@@ -44,6 +44,7 @@ pub extern fn pg_decode_change(ctx:      &LogicalDecodingContext,
                                txn:      &ReorderBufferTXN,
                                relation: Relation,
                                change:   &mut ReorderBufferChange) {
+
     let action_string = match change.action {
         REORDER_BUFFER_CHANGE_INSERT => { "Insert " },
         REORDER_BUFFER_CHANGE_UPDATE => { "Update " },
@@ -53,11 +54,10 @@ pub extern fn pg_decode_change(ctx:      &LogicalDecodingContext,
 
     let tuple_string = match change.action {
         REORDER_BUFFER_CHANGE_INSERT => {
-            let t = pg_tuple_to_rspgod_tuple(
+            pg_tuple_to_rspgod_tuple(
                 unsafe { (*relation).rd_att },
                 unsafe { (*(*change.data.tp()).newtuple).tuple }
-            );
-            t.num_attributes.to_string()
+            ).num_attributes.to_string()
         },
         REORDER_BUFFER_CHANGE_UPDATE => { "Update".to_string() },
         REORDER_BUFFER_CHANGE_DELETE => { "Delete".to_string() },
@@ -75,54 +75,38 @@ pub extern fn pg_decode_change(ctx:      &LogicalDecodingContext,
     }
 }
 
-pub fn pg_tuple_to_rspgod_tuple(description:TupleDesc, tuple:Struct_HeapTupleData) -> WrappedPG {
-    let num_attributes = unsafe { (*description).natts };
-    WrappedPG { num_attributes: num_attributes }
-}
-
-
-
-// NOTE code copied from tuple_to_avro_row, which
-//   modifies a pointer to the (avro_value_t *output_value)
-//   or returns (at the end, or via the `check` macro) an error int
 
 // type TupleDesc = *mut Struct_tupleDesc
 //   which is: struct Struct_tupleDesc {
 //                      natts: ::libc::c_int,
 //                      attrs: *mut Form_pg_attribute,
 //                      tdtypeid: Oid,
-
-fn tuple_to_string(description:TupleDesc, tuple:Struct_HeapTupleData) -> String {
+pub fn pg_tuple_to_rspgod_tuple(description:TupleDesc, tuple:Struct_HeapTupleData) -> WrappedPG {
     let num_attributes = unsafe { (*description).natts };
-    let data_structure = WrappedPG { num_attributes: num_attributes };
-    return data_structure.num_attributes.to_string();
-
+    WrappedPG { num_attributes: num_attributes }
+}
+    // tuple_to_avro_row (from bottledwater)
+    //   this works by modifying a pointer to the (avro_value_t *output_value)
+    //   or returning (at the end, or via the `check` macro) an error int
+    // -----------------------------------------------------
     // int err = 0, field = 0;
     // check(err, avro_value_reset(output_val));
-
     // for (int i = 0; i < tupdesc->natts; i++) {
     //     avro_value_t field_val;
     //     bool isnull;
     //     Datum datum;
-
     //     Form_pg_attribute attr = tupdesc->attrs[i];
     //     if (attr->attisdropped) continue; /* skip dropped columns */
-
     //     check(err, avro_value_get_by_index(output_val, field, &field_val, NULL));
-
     //     datum = heap_getattr(tuple, i + 1, tupdesc, &isnull);
-
     //     if (isnull) {
     //         check(err, avro_value_set_branch(&field_val, 0, NULL));
     //     } else {
     //         check(err, update_avro_with_datum(&field_val, attr->atttypid, datum));
     //     }
-
     //     field++;
     // }
-
     // return err;
-}
 
     // /* ----------------
     //  *		heap_getattr
