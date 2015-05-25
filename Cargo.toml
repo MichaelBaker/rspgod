@@ -2,3 +2,7 @@
 name    = "rspgod"
 version = "0.1.0"
 authors = ["Michael Baker <michaeltbaker@gmail.com>"]
+
+[dependencies.bindgen]
+git = "https://github.com/crabtw/rust-bindgen.git"
+
