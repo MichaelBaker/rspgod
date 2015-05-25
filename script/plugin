@@ -10,7 +10,9 @@ rm -f *.a
 make --debug=v
 make install
 
-psql -c $'select pg_drop_replication_slot(\'slot\')'
+psql -c $'create table if not exists test (name text, age int)'
 psql -c $'select * from pg_create_logical_replication_slot(\'slot\', \'thingy\')'
 psql -c $'insert into test (name, age) values (\'my_name\', 89)'
 psql -c $'SELECT * FROM pg_logical_slot_peek_changes(\'slot\', NULL, NULL)'
+psql -c $'select pg_drop_replication_slot(\'slot\')'
+psql -c $'drop table test'
