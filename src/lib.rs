@@ -24,6 +24,10 @@ use postgres::{
     REORDER_BUFFER_CHANGE_DELETE,
 };
 
+pub struct WrappedPG {
+    pub num_attributes:i32,
+}
+
 extern {
   fn OutputPluginPrepareWrite(ctx: &LogicalDecodingContext, last_write: bool);
   fn OutputPluginWrite(ctx: &LogicalDecodingContext, last_write: bool);
@@ -48,11 +52,13 @@ pub extern fn pg_decode_change(ctx:      &LogicalDecodingContext,
     };
 
     let tuple_string = match change.action {
-        REORDER_BUFFER_CHANGE_INSERT => { unsafe {
-            tuple_to_string(
-                (*relation).rd_att,
-                (*(*change.data.tp()).newtuple).tuple
-            ) } },
+        REORDER_BUFFER_CHANGE_INSERT => {
+            let t = pg_tuple_to_rspgod_tuple(
+                unsafe { (*relation).rd_att },
+                unsafe { (*(*change.data.tp()).newtuple).tuple }
+            );
+            t.num_attributes.to_string()
+        },
         REORDER_BUFFER_CHANGE_UPDATE => { "Update".to_string() },
         REORDER_BUFFER_CHANGE_DELETE => { "Delete".to_string() },
         _                            => { "No Data".to_string() },
@@ -69,6 +75,13 @@ pub extern fn pg_decode_change(ctx:      &LogicalDecodingContext,
     }
 }
 
+pub fn pg_tuple_to_rspgod_tuple(description:TupleDesc, tuple:Struct_HeapTupleData) -> WrappedPG {
+    let num_attributes = unsafe { (*description).natts };
+    WrappedPG { num_attributes: num_attributes }
+}
+
+
+
 // NOTE code copied from tuple_to_avro_row, which
 //   modifies a pointer to the (avro_value_t *output_value)
 //   or returns (at the end, or via the `check` macro) an error int
@@ -80,9 +93,9 @@ pub extern fn pg_decode_change(ctx:      &LogicalDecodingContext,
 //                      tdtypeid: Oid,
 
 fn tuple_to_string(description:TupleDesc, tuple:Struct_HeapTupleData) -> String {
-    unsafe {
-        (*description).natts.to_string()
-    }
+    let num_attributes = unsafe { (*description).natts };
+    let data_structure = WrappedPG { num_attributes: num_attributes };
+    return data_structure.num_attributes.to_string();
 
     // int err = 0, field = 0;
     // check(err, avro_value_reset(output_val));
