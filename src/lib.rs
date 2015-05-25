@@ -12,10 +12,13 @@ mod postgres;
 use postgres::{
     LogicalDecodingContext,
     OutputPluginOptions,
-    OUTPUT_PLUGIN_TEXTUAL_OUTPUT,
     ReorderBufferTXN,
     Relation,
     ReorderBufferChange,
+    OUTPUT_PLUGIN_TEXTUAL_OUTPUT,
+    REORDER_BUFFER_CHANGE_INSERT,
+    REORDER_BUFFER_CHANGE_UPDATE,
+    REORDER_BUFFER_CHANGE_DELETE,
 };
 
 extern {
@@ -31,13 +34,19 @@ pub extern fn pg_decode_startup(ctx: &LogicalDecodingContext, opt: &mut OutputPl
 
 #[no_mangle]
 pub extern fn pg_decode_change(ctx: &LogicalDecodingContext, txn: &ReorderBufferTXN, relation: &Relation, change: &ReorderBufferChange) {
-    let to_print = &b"WAT, world! -- rust"[..];
-    let c_to_print = CString::new(to_print).unwrap();
+    let action_string = match change.action {
+        REORDER_BUFFER_CHANGE_INSERT => { "Insert" },
+        REORDER_BUFFER_CHANGE_UPDATE => { "Update" },
+        REORDER_BUFFER_CHANGE_DELETE => { "Delete" },
+        _                            => { "Other" },
+    };
+
+    let c_to_print = CString::new(action_string).unwrap();
 
     unsafe {
-	  OutputPluginPrepareWrite(ctx, true);
-      appendStringInfoString(ctx.out, c_to_print.as_ptr());
-	  OutputPluginWrite(ctx, true);
+	    OutputPluginPrepareWrite(ctx, true);
+        appendStringInfoString(ctx.out, c_to_print.as_ptr());
+	    OutputPluginWrite(ctx, true);
     }
 }
 
