@@ -7,12 +7,14 @@ rm -f *.so
 rm -f *.dylib
 rm -f *.a
 
-make --debug=v
+make
 make install
 
 psql -c $'create table if not exists test (name text, age int)'
-psql -c $'select * from pg_create_logical_replication_slot(\'slot\', \'thingy\')'
+psql -c $'select * from pg_create_logical_replication_slot(\'slot\', \'thingy\')' || true
 psql -c $'insert into test (name, age) values (\'my_name\', 89)'
+psql -c $'update test set age = 50 where name = \'my_name\''
+psql -c $'delete from test where name = \'my_name\''
 psql -c $'SELECT * FROM pg_logical_slot_peek_changes(\'slot\', NULL, NULL)'
 psql -c $'select pg_drop_replication_slot(\'slot\')'
 psql -c $'drop table test'
