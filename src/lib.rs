@@ -25,7 +25,13 @@ use postgres::{
 };
 
 pub struct WrappedPG {
-    pub num_attributes:i32,
+    pub num_attributes: i32,
+    pub fields:         Vec<Field>,
+}
+
+pub struct Field {
+    pub name:  String,
+    pub value: String,
 }
 
 extern {
@@ -83,7 +89,18 @@ pub extern fn pg_decode_change(ctx:      &LogicalDecodingContext,
 //                      tdtypeid: Oid,
 pub fn pg_tuple_to_rspgod_tuple(description:TupleDesc, tuple:Struct_HeapTupleData) -> WrappedPG {
     let num_attributes = unsafe { (*description).natts };
-    WrappedPG { num_attributes: num_attributes }
+    let mut fields     = vec![];
+
+    for n in 0..num_attributes {
+        let attnum = unsafe { 5 };
+        let thing = format!("{}", attnum);
+        fields.push(Field { name: thing.clone(), value: thing.clone() });
+    }
+
+    WrappedPG {
+        num_attributes: num_attributes,
+        fields:         fields,
+    }
 }
     // tuple_to_avro_row (from bottledwater)
     //   this works by modifying a pointer to the (avro_value_t *output_value)
