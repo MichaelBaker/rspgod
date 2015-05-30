@@ -24,11 +24,13 @@ use postgres::{
     REORDER_BUFFER_CHANGE_DELETE,
 };
 
+#[derive(Debug)]
 pub struct WrappedPG {
     pub num_attributes: i32,
     pub fields:         Vec<Field>,
 }
 
+#[derive(Debug)]
 pub struct Field {
     pub name:  String,
     pub value: String,
@@ -58,27 +60,33 @@ pub extern fn pg_decode_change(ctx:      &LogicalDecodingContext,
         _                            => { "Other " },
     };
 
-    let tuple_string = match change.action {
-        REORDER_BUFFER_CHANGE_INSERT => {
-            pg_tuple_to_rspgod_tuple(
-                unsafe { (*relation).rd_att },
-                unsafe { (*(*change.data.tp()).newtuple).tuple }
-            ).num_attributes.to_string()
-        },
-        REORDER_BUFFER_CHANGE_UPDATE => { "Update".to_string() },
-        REORDER_BUFFER_CHANGE_DELETE => { "Delete".to_string() },
-        _                            => { "No Data".to_string() },
-    };
-
     let c_action_string = CString::new(action_string).unwrap();
-    let c_tuple_string  = CString::new(&tuple_string[..]).unwrap();
 
     unsafe {
-	    OutputPluginPrepareWrite(ctx, true);
+        OutputPluginPrepareWrite(ctx, true);
         appendStringInfoString(ctx.out, c_action_string.as_ptr());
-        appendStringInfoString(ctx.out, c_tuple_string.as_ptr());
-	    OutputPluginWrite(ctx, true);
     }
+
+    match change.action {
+        REORDER_BUFFER_CHANGE_INSERT => {
+            let tuple = pg_tuple_to_rspgod_tuple(
+                unsafe { (*relation).rd_att },
+                unsafe { (*(*change.data.tp()).newtuple).tuple }
+            );
+
+            let output         = format!("{:?}", tuple);
+            let c_tuple_string = CString::new(&output[..]).unwrap();
+
+            unsafe {
+                appendStringInfoString(ctx.out, c_tuple_string.as_ptr());
+            }
+        },
+        // REORDER_BUFFER_CHANGE_UPDATE => { "Update".to_string() },
+        // REORDER_BUFFER_CHANGE_DELETE => { "Delete".to_string() },
+        _                            => {},
+    };
+
+    unsafe { OutputPluginWrite(ctx, true); }
 }
 
 
@@ -92,8 +100,10 @@ pub fn pg_tuple_to_rspgod_tuple(description:TupleDesc, tuple:Struct_HeapTupleDat
     let mut fields     = vec![];
 
     for n in 0..num_attributes {
+        // for each attribute
+        //   get any value off of it (eg attnum)
         let attnum = unsafe { 5 };
-        let thing = format!("{}", attnum);
+        let thing  = format!("{}", attnum);
         fields.push(Field { name: thing.clone(), value: thing.clone() });
     }
 
