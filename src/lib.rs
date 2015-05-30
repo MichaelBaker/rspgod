@@ -96,13 +96,14 @@ pub extern fn pg_decode_change(ctx:      &LogicalDecodingContext,
 //                      attrs: *mut Form_pg_attribute,
 //                      tdtypeid: Oid,
 pub fn pg_tuple_to_rspgod_tuple(description:TupleDesc, tuple:Struct_HeapTupleData) -> WrappedPG {
-    let num_attributes = unsafe { (*description).natts };
+    let raw_desc       = unsafe { *description };
+    let num_attributes = raw_desc.natts;
     let mut fields     = vec![];
 
     for n in 0..num_attributes {
         // for each attribute
         //   get any value off of it (eg attnum)
-        let attnum = unsafe { 5 };
+        let attnum = unsafe { (**raw_desc.attrs.offset(n as isize)).attnum };
         let thing  = format!("{}", attnum);
         fields.push(Field { name: thing.clone(), value: thing.clone() });
     }
