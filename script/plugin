@@ -10,11 +10,11 @@ rm -f *.a
 make
 make install
 
-psql -c $'create table if not exists test (name text, age int)'
+psql -c $'create table if not exists test (nåme text, age int, other float)'
 psql -c $'select * from pg_create_logical_replication_slot(\'slot\', \'thingy\')' || true
-psql -c $'insert into test (name, age) values (\'my_name\', 89)'
-psql -c $'update test set age = 50 where name = \'my_name\''
-psql -c $'delete from test where name = \'my_name\''
+psql -c $'insert into test (nåme, age, other) values (\'my_name\', 89, 0)'
+psql -c $'update test set age = 50 where nåme = \'my_name\''
+psql -c $'delete from test where nåme = \'my_name\''
 psql -c $'SELECT * FROM pg_logical_slot_peek_changes(\'slot\', NULL, NULL)'
 psql -c $'select pg_drop_replication_slot(\'slot\')'
 psql -c $'drop table test'

@@ -5,6 +5,9 @@
 #![allow(non_upper_case_globals)]
 
 extern crate libc;
+extern crate rustc_serialize;
+
+use rustc_serialize::json;
 
 use std::ffi::CString;
 mod postgres;
@@ -24,13 +27,13 @@ use postgres::{
     REORDER_BUFFER_CHANGE_DELETE,
 };
 
-#[derive(Debug)]
+#[derive(RustcDecodable, RustcEncodable)]
 pub struct WrappedPG {
     pub num_attributes: i32,
     pub fields:         Vec<Field>,
 }
 
-#[derive(Debug)]
+#[derive(RustcDecodable, RustcEncodable)]
 pub struct Field {
     pub name:  String,
     pub value: String,
@@ -74,7 +77,7 @@ pub extern fn pg_decode_change(ctx:      &LogicalDecodingContext,
                 unsafe { (*(*change.data.tp()).newtuple).tuple }
             );
 
-            let output         = format!("{:?}", tuple);
+            let output         = format!("{}", json::encode(&tuple).unwrap());
             let c_tuple_string = CString::new(&output[..]).unwrap();
 
             unsafe {
@@ -90,6 +93,13 @@ pub extern fn pg_decode_change(ctx:      &LogicalDecodingContext,
 }
 
 
+pub fn extract_string(i8str:[::libc::c_char; 64usize]) -> String {
+    let u8str:[u8; 64usize] = unsafe { std::mem::transmute(i8str) };
+    let mut str = String::from_utf8(u8str.to_vec()).unwrap(); // unwrap = danger!
+    str.chars().take_while(|c| *c != '\u{0}').collect()
+}
+
+
 // type TupleDesc = *mut Struct_tupleDesc
 //   which is: struct Struct_tupleDesc {
 //                      natts: ::libc::c_int,
@@ -101,11 +111,9 @@ pub fn pg_tuple_to_rspgod_tuple(description:TupleDesc, tuple:Struct_HeapTupleDat
     let mut fields     = vec![];
 
     for n in 0..num_attributes {
-        // for each attribute
-        //   get any value off of it (eg attnum)
-        let attnum = unsafe { (**raw_desc.attrs.offset(n as isize)).attnum };
-        let thing  = format!("{}", attnum);
-        fields.push(Field { name: thing.clone(), value: thing.clone() });
+        let pg_attribute = unsafe { **raw_desc.attrs.offset(n as isize) };
+        let name         = extract_string(pg_attribute.attname.data);
+        fields.push(Field { name: name.clone(), value: name.clone() });
     }
 
     WrappedPG {
