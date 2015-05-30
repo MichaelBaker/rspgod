@@ -12,3 +12,6 @@ git = "https://github.com/crabtw/rust-bindgen.git"
 
 [dependencies.libc]
 version = "0.1.*"
+
+[dependencies.rustc-serialize]
+version = "0.3.14"
