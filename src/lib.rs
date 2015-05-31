@@ -134,9 +134,12 @@ pub fn pg_tuple_to_rspgod_tuple(description:TupleDesc, tuple:HeapTuple) -> Wrapp
         let isnull = &mut (0 as ::libc::c_char);
         let datum  = unsafe { macrowrap_heap_getattr(tuple, (n as i32) + 1, description, isnull) };
         if *isnull == (0 as ::libc::c_char) {
-            fields.push(Field { name: name.clone(), value: None });
+            fields.push(Field {
+                name:  name.clone(),
+                value: Some(datum_to_string(pg_attribute.atttypid, datum)),
+            });
         } else {
-            fields.push(Field { name: name.clone(), value: Some(name.clone()) });
+            fields.push(Field { name: name.clone(), value: None });
         }
     }
 
@@ -145,33 +148,6 @@ pub fn pg_tuple_to_rspgod_tuple(description:TupleDesc, tuple:HeapTuple) -> Wrapp
         cells:          fields,
     }
 }
-    // tuple_to_avro_row (from bottledwater)
-    //   this works by modifying a pointer to the (avro_value_t *output_value)
-    //   or returning (at the end, or via the `check` macro) an error int
-    // -----------------------------------------------------
-    // int err = 0, field = 0;
-    // check(err, avro_value_reset(output_val));
-    // for (int i = 0; i < tupdesc->natts; i++) {
-    //     avro_value_t field_val;
-    //     bool isnull;
-    //     Datum datum;
-    //     Form_pg_attribute attr = tupdesc->attrs[i];
-    //     if (attr->attisdropped) continue; /* skip dropped columns */
-    //     check(err, avro_value_get_by_index(output_val, field, &field_val, NULL));
-    //     datum = heap_getattr(tuple, i + 1, tupdesc, &isnull);
-    //     if (isnull) {
-    //         check(err, avro_value_set_branch(&field_val, 0, NULL));
-    //     } else {
-    //         check(err, update_avro_with_datum(&field_val, attr->atttypid, datum));
-    //     }
-    //     field++;
-    // }
-    // return err;
-
-
-
-
-
 
 #[no_mangle]
 pub extern fn pg_decode_commit_txn(ctx: &LogicalDecodingContext, txn: &ReorderBufferTXN, commit_lsn: u64) {
@@ -191,15 +167,15 @@ pub extern fn pg_decode_shutdown(ctx: &LogicalDecodingContext) {
 fn datum_to_string(typid:Oid, datum:Datum) -> String {
     unsafe {
         let mut output_func = 0;
-        let mut is_varlena  = 0 as ::libc::c_char;
+        let mut is_varlena  = 0 as ::libc::c_char; // bool
 
         getTypeOutputInfo(typid, &mut output_func, &mut is_varlena);
 
         let real_datum = if is_varlena == (0 as ::libc::c_char) {
+            datum
+        } else {
             let toasty = std::mem::transmute(macrowrap_PG_DETOAST_DATUM(datum));
             macrowrap_PointerGetDatum(toasty)
-        } else {
-            datum
         };
 
         /* This looks up the output function by OID on every call. Might be a bit faster
