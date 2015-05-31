@@ -4553,6 +4553,30 @@ impl ::std::default::Default for Struct_LogicalDecodingContext {
     fn default() -> Self { unsafe { ::std::mem::zeroed() } }
 }
 pub type LogicalDecodingContext = Struct_LogicalDecodingContext;
+#[repr(C)]
+#[derive(Copy)]
+pub struct Struct_OpBtreeInterpretation {
+    pub opfamily_id: Oid,
+    pub strategy: ::libc::c_int,
+    pub oplefttype: Oid,
+    pub oprighttype: Oid,
+}
+impl ::std::clone::Clone for Struct_OpBtreeInterpretation {
+    fn clone(&self) -> Self { *self }
+}
+impl ::std::default::Default for Struct_OpBtreeInterpretation {
+    fn default() -> Self { unsafe { ::std::mem::zeroed() } }
+}
+pub type OpBtreeInterpretation = Struct_OpBtreeInterpretation;
+pub type Enum_IOFuncSelector = ::libc::c_uint;
+pub const IOFunc_input: ::libc::c_uint = 0;
+pub const IOFunc_output: ::libc::c_uint = 1;
+pub const IOFunc_receive: ::libc::c_uint = 2;
+pub const IOFunc_send: ::libc::c_uint = 3;
+pub type IOFuncSelector = Enum_IOFuncSelector;
+pub type get_attavgwidth_hook_type =
+    ::std::option::Option<extern "C" fn(relid: Oid, attnum: AttrNumber)
+                              -> int32>;
 pub type __va_list_tag = Struct___va_list_tag;
 #[repr(C)]
 #[derive(Copy)]
@@ -4637,6 +4661,7 @@ extern "C" {
     pub static mut ReplicationSlotCtl: *mut ReplicationSlotCtlData;
     pub static mut MyReplicationSlot: *mut ReplicationSlot;
     pub static mut max_replication_slots: ::libc::c_int;
+    pub static mut get_attavgwidth_hook: get_attavgwidth_hook_type;
 }
 extern "C" {
     pub fn clearerr(arg1: *mut FILE) -> ();
@@ -6892,7 +6917,139 @@ extern "C" {
                                                  restart_lsn: XLogRecPtr)
      -> ();
     pub fn LogicalConfirmReceivedLocation(lsn: XLogRecPtr) -> ();
+    pub fn op_in_opfamily(opno: Oid, opfamily: Oid) -> _bool;
+    pub fn get_op_opfamily_strategy(opno: Oid, opfamily: Oid)
+     -> ::libc::c_int;
+    pub fn get_op_opfamily_sortfamily(opno: Oid, opfamily: Oid) -> Oid;
+    pub fn get_op_opfamily_properties(opno: Oid, opfamily: Oid,
+                                      ordering_op: _bool,
+                                      strategy: *mut ::libc::c_int,
+                                      lefttype: *mut Oid, righttype: *mut Oid)
+     -> ();
+    pub fn get_opfamily_member(opfamily: Oid, lefttype: Oid, righttype: Oid,
+                               strategy: int16) -> Oid;
+    pub fn get_ordering_op_properties(opno: Oid, opfamily: *mut Oid,
+                                      opcintype: *mut Oid,
+                                      strategy: *mut int16) -> _bool;
+    pub fn get_sort_function_for_ordering_op(opno: Oid, sortfunc: *mut Oid,
+                                             issupport: *mut _bool,
+                                             reverse: *mut _bool) -> _bool;
+    pub fn get_equality_op_for_ordering_op(opno: Oid, reverse: *mut _bool)
+     -> Oid;
+    pub fn get_ordering_op_for_equality_op(opno: Oid, use_lhs_type: _bool)
+     -> Oid;
+    pub fn get_mergejoin_opfamilies(opno: Oid) -> *mut List;
+    pub fn get_compatible_hash_operators(opno: Oid, lhs_opno: *mut Oid,
+                                         rhs_opno: *mut Oid) -> _bool;
+    pub fn get_op_hash_functions(opno: Oid, lhs_procno: *mut RegProcedure,
+                                 rhs_procno: *mut RegProcedure) -> _bool;
+    pub fn get_op_btree_interpretation(opno: Oid) -> *mut List;
+    pub fn equality_ops_are_compatible(opno1: Oid, opno2: Oid) -> _bool;
+    pub fn get_opfamily_proc(opfamily: Oid, lefttype: Oid, righttype: Oid,
+                             procnum: int16) -> Oid;
+    pub fn get_attname(relid: Oid, attnum: AttrNumber) -> *mut ::libc::c_char;
+    pub fn get_relid_attribute_name(relid: Oid, attnum: AttrNumber)
+     -> *mut ::libc::c_char;
+    pub fn get_attnum(relid: Oid, attname: *const ::libc::c_char)
+     -> AttrNumber;
+    pub fn get_atttype(relid: Oid, attnum: AttrNumber) -> Oid;
+    pub fn get_atttypmod(relid: Oid, attnum: AttrNumber) -> int32;
+    pub fn get_atttypetypmodcoll(relid: Oid, attnum: AttrNumber,
+                                 typid: *mut Oid, typmod: *mut int32,
+                                 collid: *mut Oid) -> ();
+    pub fn get_collation_name(colloid: Oid) -> *mut ::libc::c_char;
+    pub fn get_constraint_name(conoid: Oid) -> *mut ::libc::c_char;
+    pub fn get_opclass_family(opclass: Oid) -> Oid;
+    pub fn get_opclass_input_type(opclass: Oid) -> Oid;
+    pub fn get_opcode(opno: Oid) -> RegProcedure;
+    pub fn get_opname(opno: Oid) -> *mut ::libc::c_char;
+    pub fn op_input_types(opno: Oid, lefttype: *mut Oid, righttype: *mut Oid)
+     -> ();
+    pub fn op_mergejoinable(opno: Oid, inputtype: Oid) -> _bool;
+    pub fn op_hashjoinable(opno: Oid, inputtype: Oid) -> _bool;
+    pub fn op_strict(opno: Oid) -> _bool;
+    pub fn op_volatile(opno: Oid) -> ::libc::c_char;
+    pub fn get_commutator(opno: Oid) -> Oid;
+    pub fn get_negator(opno: Oid) -> Oid;
+    pub fn get_oprrest(opno: Oid) -> RegProcedure;
+    pub fn get_oprjoin(opno: Oid) -> RegProcedure;
+    pub fn get_func_name(funcid: Oid) -> *mut ::libc::c_char;
+    pub fn get_func_namespace(funcid: Oid) -> Oid;
+    pub fn get_func_rettype(funcid: Oid) -> Oid;
+    pub fn get_func_nargs(funcid: Oid) -> ::libc::c_int;
+    pub fn get_func_signature(funcid: Oid, argtypes: *mut *mut Oid,
+                              nargs: *mut ::libc::c_int) -> Oid;
+    pub fn get_func_variadictype(funcid: Oid) -> Oid;
+    pub fn get_func_retset(funcid: Oid) -> _bool;
+    pub fn func_strict(funcid: Oid) -> _bool;
+    pub fn func_volatile(funcid: Oid) -> ::libc::c_char;
+    pub fn get_func_leakproof(funcid: Oid) -> _bool;
+    pub fn get_func_cost(funcid: Oid) -> float4;
+    pub fn get_func_rows(funcid: Oid) -> float4;
+    pub fn get_relname_relid(relname: *const ::libc::c_char,
+                             relnamespace: Oid) -> Oid;
+    pub fn get_rel_name(relid: Oid) -> *mut ::libc::c_char;
+    pub fn get_rel_namespace(relid: Oid) -> Oid;
+    pub fn get_rel_type_id(relid: Oid) -> Oid;
+    pub fn get_rel_relkind(relid: Oid) -> ::libc::c_char;
+    pub fn get_rel_tablespace(relid: Oid) -> Oid;
+    pub fn get_typisdefined(typid: Oid) -> _bool;
+    pub fn get_typlen(typid: Oid) -> int16;
+    pub fn get_typbyval(typid: Oid) -> _bool;
+    pub fn get_typlenbyval(typid: Oid, typlen: *mut int16,
+                           typbyval: *mut _bool) -> ();
+    pub fn get_typlenbyvalalign(typid: Oid, typlen: *mut int16,
+                                typbyval: *mut _bool,
+                                typalign: *mut ::libc::c_char) -> ();
+    pub fn getTypeIOParam(typeTuple: HeapTuple) -> Oid;
+    pub fn get_type_io_data(typid: Oid, which_func: IOFuncSelector,
+                            typlen: *mut int16, typbyval: *mut _bool,
+                            typalign: *mut ::libc::c_char,
+                            typdelim: *mut ::libc::c_char,
+                            typioparam: *mut Oid, func: *mut Oid) -> ();
+    pub fn get_typstorage(typid: Oid) -> ::libc::c_char;
+    pub fn get_typdefault(typid: Oid) -> *mut Node;
+    pub fn get_typtype(typid: Oid) -> ::libc::c_char;
+    pub fn type_is_rowtype(typid: Oid) -> _bool;
+    pub fn type_is_enum(typid: Oid) -> _bool;
+    pub fn type_is_range(typid: Oid) -> _bool;
+    pub fn get_type_category_preferred(typid: Oid,
+                                       typcategory: *mut ::libc::c_char,
+                                       typispreferred: *mut _bool) -> ();
+    pub fn get_typ_typrelid(typid: Oid) -> Oid;
+    pub fn get_element_type(typid: Oid) -> Oid;
+    pub fn get_array_type(typid: Oid) -> Oid;
+    pub fn get_base_element_type(typid: Oid) -> Oid;
+    pub fn getTypeInputInfo(_type: Oid, typInput: *mut Oid,
+                            typIOParam: *mut Oid) -> ();
+    pub fn getTypeOutputInfo(_type: Oid, typOutput: *mut Oid,
+                             typIsVarlena: *mut _bool) -> ();
+    pub fn getTypeBinaryInputInfo(_type: Oid, typReceive: *mut Oid,
+                                  typIOParam: *mut Oid) -> ();
+    pub fn getTypeBinaryOutputInfo(_type: Oid, typSend: *mut Oid,
+                                   typIsVarlena: *mut _bool) -> ();
+    pub fn get_typmodin(typid: Oid) -> Oid;
+    pub fn get_typcollation(typid: Oid) -> Oid;
+    pub fn type_is_collatable(typid: Oid) -> _bool;
+    pub fn getBaseType(typid: Oid) -> Oid;
+    pub fn getBaseTypeAndTypmod(typid: Oid, typmod: *mut int32) -> Oid;
+    pub fn get_typavgwidth(typid: Oid, typmod: int32) -> int32;
+    pub fn get_attavgwidth(relid: Oid, attnum: AttrNumber) -> int32;
+    pub fn get_attstatsslot(statstuple: HeapTuple, atttype: Oid,
+                            atttypmod: int32, reqkind: ::libc::c_int,
+                            reqop: Oid, actualop: *mut Oid,
+                            values: *mut *mut Datum,
+                            nvalues: *mut ::libc::c_int,
+                            numbers: *mut *mut float4,
+                            nnumbers: *mut ::libc::c_int) -> _bool;
+    pub fn free_attstatsslot(atttype: Oid, values: *mut Datum,
+                             nvalues: ::libc::c_int, numbers: *mut float4,
+                             nnumbers: ::libc::c_int) -> ();
+    pub fn get_namespace_name(nspid: Oid) -> *mut ::libc::c_char;
+    pub fn get_range_subtype(rangeOid: Oid) -> Oid;
     pub fn macrowrap_heap_getattr(tup: HeapTuple, attnum: ::libc::c_int,
                                   tupleDesc: TupleDesc, isnull: *mut _bool)
      -> Datum;
+    pub fn macrowrap_PointerGetDatum(datum: *mut ::libc::c_void) -> Datum;
+    pub fn macrowrap_PG_DETOAST_DATUM(datum: Datum) -> *mut Struct_varlena;
 }
