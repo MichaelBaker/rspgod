@@ -4,6 +4,13 @@
 
 PG_MODULE_MAGIC;
 
+Datum macrowrap_heap_getattr(HeapTuple tup,
+                             int       attnum,
+                             TupleDesc tupleDesc,
+                             bool      *isnull) {
+    return heap_getattr(tup, attnum, tupleDesc, isnull);
+}
+
 void pg_decode_startup(LogicalDecodingContext *ctx, OutputPluginOptions *opt, bool is_init);
 void pg_decode_shutdown(LogicalDecodingContext *ctx);
 void pg_decode_begin_txn(LogicalDecodingContext *ctx, ReorderBufferTXN *txn);

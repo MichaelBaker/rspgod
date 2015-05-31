@@ -11,10 +11,10 @@ use rustc_serialize::json;
 use std::ffi::CString;
 
 pub mod automatic_postgres;
-pub mod manual_postgres;
 
 use automatic_postgres::{
     LogicalDecodingContext,
+    macrowrap_heap_getattr,
     OutputPluginOptions,
     ReorderBufferTXN,
     Relation,
@@ -27,9 +27,6 @@ use automatic_postgres::{
     REORDER_BUFFER_CHANGE_DELETE,
 };
 
-use manual_postgres::{
-    heap_getattr,
-};
 
 #[derive(RustcDecodable, RustcEncodable)]
 pub struct WrappedPG {
@@ -130,13 +127,12 @@ pub fn pg_tuple_to_rspgod_tuple(description:TupleDesc, tuple:HeapTuple) -> Wrapp
         let pg_attribute = unsafe { **raw_desc.attrs.offset(n as isize) };
         let name         = extract_string(pg_attribute.attname.data);
 
-        match heap_getattr(tuple, n + 1, description) {
-            Some(datum) => {
-                fields.push(Field { name: name.clone(), value: Some(name.clone()) });
-            },
-            None => {
-                fields.push(Field { name: name.clone(), value: None });
-            },
+        let isnull = &mut (0 as ::libc::c_char);
+        let datum  = unsafe { macrowrap_heap_getattr(tuple, (n as i32) + 1, description, isnull) };
+        if *isnull == (0 as ::libc::c_char) {
+            fields.push(Field { name: name.clone(), value: None });
+        } else {
+            fields.push(Field { name: name.clone(), value: Some(name.clone()) });
         }
     }
 

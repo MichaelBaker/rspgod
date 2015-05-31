@@ -1,0 +1,40 @@
+#!/usr/bin/env ruby
+
+dylib_dir      = '/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib'
+pg_include_dir = "/usr/local/Cellar/postgresql/9.4.1/include/server/"
+bindgen_dir    = File.expand_path '../../rust-bindgen', __dir__
+rspgod_dir     = File.expand_path '..', __dir__
+target_file    = File.join rspgod_dir, "src", "automatic_postgres.rs"
+source_file    = File.join rspgod_dir, 'src', 'headers.h'
+
+
+require 'shellwords'
+require 'pp'
+
+def execute(explanation, command)
+  $stdout.puts "\e[34m#{explanation}:\n\e[33m#{command.pretty_inspect}\e[39m"
+  system command.shelljoin
+end
+
+Dir.chdir bindgen_dir
+
+execute 'Transpile C into Rust', [
+  'env', "DYLD_LIBRARY_PATH=#{dylib_dir}",
+
+  "target/debug/bindgen", "-I", pg_include_dir,
+                          "-o", target_file,
+                          source_file,
+                          "-builtins",
+]
+
+execute 'Clean the generated file', [
+  'ruby',
+    '-n',
+    '-i',
+    '-e', 'BEGIN { prev = "" }',
+    '-e', 'print unless prev == $_',
+    '-e', 'prev = $_',
+    target_file
+]
+    # pub static mut no_such_variable: ::libc::c_int;
+    # pub static mut no_such_variable: ::libc::c_int;

@@ -6892,4 +6892,7 @@ extern "C" {
                                                  restart_lsn: XLogRecPtr)
      -> ();
     pub fn LogicalConfirmReceivedLocation(lsn: XLogRecPtr) -> ();
+    pub fn macrowrap_heap_getattr(tup: HeapTuple, attnum: ::libc::c_int,
+                                  tupleDesc: TupleDesc, isnull: *mut _bool)
+     -> Datum;
 }
