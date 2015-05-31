@@ -4,7 +4,7 @@ dylib_dir      = '/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDef
 pg_include_dir = "/usr/local/Cellar/postgresql/9.4.1/include/server/"
 bindgen_dir    = File.expand_path '../../rust-bindgen', __dir__
 rspgod_dir     = File.expand_path '..', __dir__
-target_file    = File.join rspgod_dir, "src", "automatic_postgres.rs"
+target_file    = File.join rspgod_dir, "src", "postgres.rs"
 source_file    = File.join rspgod_dir, 'src', 'headers.h'
 
 

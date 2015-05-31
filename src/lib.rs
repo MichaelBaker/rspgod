@@ -10,9 +10,9 @@ extern crate rustc_serialize;
 use rustc_serialize::json;
 use std::ffi::CString;
 
-pub mod automatic_postgres;
+pub mod postgres;
 
-use automatic_postgres::{
+use postgres::{
     LogicalDecodingContext,
     macrowrap_heap_getattr,
     OutputPluginOptions,
@@ -43,7 +43,7 @@ pub struct Field {
 extern {
   fn OutputPluginPrepareWrite(ctx: &LogicalDecodingContext, last_write: bool);
   fn OutputPluginWrite(ctx: &LogicalDecodingContext, last_write: bool);
-  fn appendStringInfoString(str: *mut automatic_postgres::Struct_StringInfoData, s: *const i8);
+  fn appendStringInfoString(str: *mut postgres::Struct_StringInfoData, s: *const i8);
 }
 
 #[no_mangle]
