@@ -29,9 +29,17 @@ use postgres::{
 
 
 #[derive(RustcDecodable, RustcEncodable)]
+pub enum Change {
+    Insert  { new_row: WrappedPG },
+    Delete  { whatever: String },
+    Update  { whatever: String },
+    Unknown { whatever: String },
+}
+
+#[derive(RustcDecodable, RustcEncodable)]
 pub struct WrappedPG {
     pub num_attributes: u32,
-    pub fields:         Vec<Field>,
+    pub cells:          Vec<Field>,
 }
 
 #[derive(RustcDecodable, RustcEncodable)]
@@ -57,40 +65,28 @@ pub extern fn pg_decode_change(ctx:      &LogicalDecodingContext,
                                relation: Relation,
                                change:   &mut ReorderBufferChange) {
 
-    let action_string = match change.action {
-        REORDER_BUFFER_CHANGE_INSERT => { "Insert " },
-        REORDER_BUFFER_CHANGE_UPDATE => { "Update " },
-        REORDER_BUFFER_CHANGE_DELETE => { "Delete " },
-        _                            => { "Other " },
-    };
-
-    let c_action_string = CString::new(action_string).unwrap();
-
-    unsafe {
-        OutputPluginPrepareWrite(ctx, true);
-        appendStringInfoString(ctx.out, c_action_string.as_ptr());
-    }
-
-    match change.action {
+    let change = match change.action {
         REORDER_BUFFER_CHANGE_INSERT => {
             let tuple = pg_tuple_to_rspgod_tuple(
                 unsafe { (*relation).rd_att },
                 unsafe { &mut(*(*change.data.tp()).newtuple).tuple }
             );
 
-            let output         = format!("{}", json::encode(&tuple).unwrap());
-            let c_tuple_string = CString::new(&output[..]).unwrap();
-
-            unsafe {
-                appendStringInfoString(ctx.out, c_tuple_string.as_ptr());
-            }
+            Change::Insert { new_row: tuple }
         },
-        // REORDER_BUFFER_CHANGE_UPDATE => { "Update".to_string() },
-        // REORDER_BUFFER_CHANGE_DELETE => { "Delete".to_string() },
-        _                            => {},
+        REORDER_BUFFER_CHANGE_UPDATE => { Change::Update  { whatever: "".to_string() } },
+        REORDER_BUFFER_CHANGE_DELETE => { Change::Delete  { whatever: "".to_string() } },
+        _                            => { Change::Unknown { whatever: "".to_string() } },
     };
 
-    unsafe { OutputPluginWrite(ctx, true); }
+    let output         = format!("{}", json::encode(&change).unwrap());
+    let c_tuple_string = CString::new(&output[..]).unwrap();
+
+    unsafe {
+        OutputPluginPrepareWrite(ctx, true);
+        appendStringInfoString(ctx.out, c_tuple_string.as_ptr());
+        OutputPluginWrite(ctx, true);
+    }
 }
 
 
@@ -138,7 +134,7 @@ pub fn pg_tuple_to_rspgod_tuple(description:TupleDesc, tuple:HeapTuple) -> Wrapp
 
     WrappedPG {
         num_attributes: num_attributes,
-        fields:         fields,
+        cells:          fields,
     }
 }
     // tuple_to_avro_row (from bottledwater)
