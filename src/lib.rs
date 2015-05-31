@@ -13,6 +13,7 @@ use std::ffi::CString;
 mod postgres;
 
 use postgres::{
+    heap_getsysattr,
     LogicalDecodingContext,
     OutputPluginOptions,
     ReorderBufferTXN,
@@ -20,6 +21,8 @@ use postgres::{
     ReorderBufferChange,
     TupleDesc,
     HeapTuple,
+    HeapTupleHeader,
+    Datum,
     Struct_HeapTupleData,
     OUTPUT_PLUGIN_TEXTUAL_OUTPUT,
     REORDER_BUFFER_CHANGE_INSERT,
@@ -29,7 +32,7 @@ use postgres::{
 
 #[derive(RustcDecodable, RustcEncodable)]
 pub struct WrappedPG {
-    pub num_attributes: i32,
+    pub num_attributes: u32,
     pub fields:         Vec<Field>,
 }
 
@@ -74,7 +77,7 @@ pub extern fn pg_decode_change(ctx:      &LogicalDecodingContext,
         REORDER_BUFFER_CHANGE_INSERT => {
             let tuple = pg_tuple_to_rspgod_tuple(
                 unsafe { (*relation).rd_att },
-                unsafe { (*(*change.data.tp()).newtuple).tuple }
+                unsafe { &mut(*(*change.data.tp()).newtuple).tuple }
             );
 
             let output         = format!("{}", json::encode(&tuple).unwrap());
@@ -105,14 +108,31 @@ pub fn extract_string(i8str:[::libc::c_char; 64usize]) -> String {
 //                      natts: ::libc::c_int,
 //                      attrs: *mut Form_pg_attribute,
 //                      tdtypeid: Oid,
-pub fn pg_tuple_to_rspgod_tuple(description:TupleDesc, tuple:Struct_HeapTupleData) -> WrappedPG {
-    let raw_desc       = unsafe { *description };
-    let num_attributes = raw_desc.natts;
-    let mut fields     = vec![];
+
+// pub struct Struct_HeapTupleData {
+//     pub t_len: uint32,
+//     pub t_self: ItemPointerData,
+//     pub t_tableOid: Oid,
+//     pub t_data: HeapTupleHeader,
+// }
+
+// pub fn heap_getsysattr(tup: HeapTuple, attnum: ::libc::c_int, tupleDesc: TupleDesc, isnull: *mut _bool) -> Datum;
+// pub fn nocachegetattr(tup: HeapTuple, attnum: ::libc::c_int, att: TupleDesc) -> Datum;
+// #define TextDatumGetCString(d) text_to_cstring((text *) DatumGetPointer(d))
+// src/include/access/htup_details.h
+pub fn pg_tuple_to_rspgod_tuple(description:TupleDesc, tuple:HeapTuple) -> WrappedPG {
+    let raw_desc         = unsafe { *description };
+    let num_attributes   = raw_desc.natts as u32;
+    let mut fields       = vec![];
 
     for n in 0..num_attributes {
         let pg_attribute = unsafe { **raw_desc.attrs.offset(n as isize) };
         let name         = extract_string(pg_attribute.attname.data);
+
+        match heap_getattr(tuple, n + 1, description) {
+            Some(datum) => {},
+            None        => {},
+        }
         fields.push(Field { name: name.clone(), value: name.clone() });
     }
 
@@ -144,87 +164,123 @@ pub fn pg_tuple_to_rspgod_tuple(description:TupleDesc, tuple:Struct_HeapTupleDat
     // }
     // return err;
 
-    // /* ----------------
-    //  *		heap_getattr
-    //  *
-    //  *		Extract an attribute of a heap tuple and return it as a Datum.
-    //  *		This works for either system or user attributes.  The given attnum
-    //  *		is properly range-checked.
-    //  *
-    //  *		If the field in question has a NULL value, we return a zero Datum
-    //  *		and set *isnull == true.  Otherwise, we set *isnull == false.
-    //  *
-    //  *		<tup> is the pointer to the heap tuple.  <attnum> is the attribute
-    //  *		number of the column (field) caller wants.  <tupleDesc> is a
-    //  *		pointer to the structure describing the row and all its fields.
-    //  * ----------------
-    //  */
-    // #define heap_getattr(tup, attnum, tupleDesc, isnull) \
-    // 	( \
-    // 		((attnum) > 0) ? \
-    // 		( \
-    // 			((attnum) > (int) HeapTupleHeaderGetNatts((tup)->t_data)) ? \
-    // 			( \
-    // 				(*(isnull) = true), \
-    // 				(Datum)NULL \
-    // 			) \
-    // 			: \
-    // 				fastgetattr((tup), (attnum), (tupleDesc), (isnull)) \
-    // 		) \
-    // 		: \
-    // 			heap_getsysattr((tup), (attnum), (tupleDesc), (isnull)) \
-    // 	)
-//
-    // /* ----------------
-    //  *		fastgetattr
-    //  *
-    //  *		Fetch a user attribute's value as a Datum (might be either a
-    //  *		value, or a pointer into the data area of the tuple).
-    //  *
-    //  *		This must not be used when a system attribute might be requested.
-    //  *		Furthermore, the passed attnum MUST be valid.  Use heap_getattr()
-    //  *		instead, if in doubt.
-    //  *
-    //  *		This gets called many times, so we macro the cacheable and NULL
-    //  *		lookups, and call nocachegetattr() for the rest.
-    //  * ----------------
-    //  */
-    //
-    // #if !defined(DISABLE_COMPLEX_MACRO)
-    //
-    // #define fastgetattr(tup, attnum, tupleDesc, isnull)					\
-    // (																	\
-    // 	AssertMacro((attnum) > 0),										\
-    // 	(*(isnull) = false),											\
-    // 	HeapTupleNoNulls(tup) ?											\
-    // 	(																\
-    // 		(tupleDesc)->attrs[(attnum)-1]->attcacheoff >= 0 ?			\
-    // 		(															\
-    // 			fetchatt((tupleDesc)->attrs[(attnum)-1],				\
-    // 				(char *) (tup)->t_data + (tup)->t_data->t_hoff +	\
-    // 					(tupleDesc)->attrs[(attnum)-1]->attcacheoff)	\
-    // 		)															\
-    // 		:															\
-    // 			nocachegetattr((tup), (attnum), (tupleDesc))			\
-    // 	)																\
-    // 	:																\
-    // 	(																\
-    // 		att_isnull((attnum)-1, (tup)->t_data->t_bits) ?				\
-    // 		(															\
-    // 			(*(isnull) = true),										\
-    // 			(Datum)NULL												\
-    // 		)															\
-    // 		:															\
-    // 		(															\
-    // 			nocachegetattr((tup), (attnum), (tupleDesc))			\
-    // 		)															\
-    // 	)																\
-    // )
-    // #else							/* defined(DISABLE_COMPLEX_MACRO) */
-    //
-    // extern Datum fastgetattr(HeapTuple tup, int attnum, TupleDesc tupleDesc,
-    // 			bool *isnull);
-    // #endif   /* defined(DISABLE_COMPLEX_MACRO) */
+
+
+// THESE ARE TRANSLATED FROM PG MACROS MOSTLY
+// on my system: /usr/local/Cellar/postgresql/9.4.1/include/server/access/htup_details.h
+/* ----------------
+ *		heap_getattr
+ *
+ *		Extract an attribute of a heap tuple and return it as a Datum.
+ *		This works for either system or user attributes.  The given attnum
+ *		is properly range-checked.
+ *
+ *		If the field in question has a NULL value, we return a zero Datum
+ *		and set *isnull == true.  Otherwise, we set *isnull == false.
+ *
+ *		<tup> is the pointer to the heap tuple.  <attnum> is the attribute
+ *		number of the column (field) caller wants.  <tupleDesc> is a
+ *		pointer to the structure describing the row and all its fields.
+ * ----------------
+ */
+
+// 11 bits for number of attributes
+const HEAP_NATTS_MASK   : u16 = 0x07FF;
+// const HEAP_KEYS_UPDATED : u16 = 0x2000; // tuple was updated and key cols modified, or tuple deleted
+// const HEAP_HOT_UPDATED  : u16 = 0x4000; // tuple was HOT-updated
+// const HEAP_ONLY_TUPLE   : u16 = 0x8000; // this is heap-only tuple
+// const HEAP2_XACT_MASK   : u16 = 0xE000; // visibility-related bits
+
+pub fn HeapTupleHeaderGetNatts(header:HeapTupleHeader) -> u16  {
+    unsafe { *header }.t_infomask2 & HEAP_NATTS_MASK
+}
+
+
+// information stored in t_infomask:
+const HEAP_HASNULL          : u16 = 0x0001; // has null attribute(s)
+// const HEAP_HASVARWIDTH      : u16 = 0x0002; // has variable-width attribute(s)
+// const HEAP_HASEXTERNAL      : u16 = 0x0004; // has external stored attribute(s)
+// const HEAP_HASOID           : u16 = 0x0008; // has an object-id field
+// const HEAP_XMAX_KEYSHR_LOCK : u16 = 0x0010; // xmax is a key-shared locker
+// const HEAP_COMBOCID         : u16 = 0x0020; // t_cid is a combo cid
+// const HEAP_XMAX_EXCL_LOCK   : u16 = 0x0040; // xmax is exclusive locker
+// const HEAP_XMAX_LOCK_ONLY   : u16 = 0x0080; // xmax, if valid, is only a locker
+pub fn HeapTupleNoNulls(tuple:HeapTuple) -> bool {
+    0 == (HEAP_HASNULL & unsafe { (*(*tuple).t_data).t_infomask })
+}
+
+// check to see if the ATT'th bit of an array of 8-bit bytes is set.
+// pub fn att_isnull(attnum:u32, pub t_bits: [bits8; 1usize],) {
+//     let low_bitmask  = 1 << (attnum & 0x07); // set the attnumth bit
+//     let high_bitmask = (BITS)[attnum >> 3];
+//     0 == (low_bitmask & high_bitmask)
+// }
+
+// pub type HeapTuple = *mut HeapTupleData;
+// pub type HeapTupleData = Struct_HeapTupleData;
+// pub t_data: HeapTupleHeader,
+
+// pub type HeapTupleHeader = *mut Struct_HeapTupleHeaderData;
+// pub struct Struct_HeapTupleHeaderData {
+//     pub t_choice: Union_Unnamed26,
+//     pub t_ctid: ItemPointerData,
+//     pub t_infomask2: uint16,
+//     pub t_infomask: uint16,
+//     pub t_hoff: uint8,
+//     pub t_bits: [bits8; 1usize],
+// }
+
+// Originally the macro heap_getattr
+pub fn heap_getattr(tuple: HeapTuple, attnum: u32, tuple_desc: TupleDesc) -> Option<Datum> {
+    if attnum > 0 {
+        if attnum > HeapTupleHeaderGetNatts(unsafe { *tuple }.t_data) as u32 {
+            None
+        } else {
+            fastgetattr(tuple, attnum, tuple_desc)
+        }
+    } else {
+        let isnull = &mut (0 as ::libc::c_char);
+        let datum  = unsafe { heap_getsysattr(tuple, attnum as i32, tuple_desc, isnull) };
+        if(*isnull == (0 as ::libc::c_char)) {
+            None
+        } else {
+            Some(datum)
+        }
+    }
+}
+
+/* ----------------
+ *		fastgetattr
+ *
+ *		Fetch a user attribute's value as a Datum (might be either a
+ *		value, or a pointer into the data area of the tuple).
+ *
+ *		This must not be used when a system attribute might be requested.
+ *		Furthermore, the passed attnum MUST be valid.  Use heap_getattr()
+ *		instead, if in doubt.
+ *
+ *		This gets called many times, so we macro the cacheable and NULL
+ *		lookups, and call nocachegetattr() for the rest.
+ * ----------------
+ */
+pub fn fastgetattr(tuple: HeapTuple, attnum: u32, tuple_desc: TupleDesc) -> Option<Datum> {
+    None
+    // if HeapTupleNoNulls(tuple) {
+    //     if /* (tupleDesc)->attrs[(attnum)-1]->attcacheoff >= 0 ? */ {
+    //         // fetchatt((tupleDesc)->attrs[(attnum)-1],
+    //         // 	(char *) (tup)->t_data + (tup)->t_data->t_hoff +
+    //         // 		(tupleDesc)->attrs[(attnum)-1]->attcacheoff)
+    //     } else {
+    //         Some(nocachegetattr(tuple, attnum, tuple_desc))
+    //     }
+    // } else {
+    //     if att_isnull((attnum)-1, (tup)->t_data->t_bits) {
+    //         None
+    //     } else {
+    //         Some(nocachegetattr(tuple, attnum, tuple_desc))
+    //     }
+    // }
+}
 
 
 #[no_mangle]
