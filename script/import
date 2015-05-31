@@ -14,6 +14,7 @@ require 'pp'
 def execute(explanation, command)
   $stdout.puts "\e[34m#{explanation}:\n\e[33m#{command.pretty_inspect}\e[39m"
   system command.shelljoin
+  exit 1 unless $?.success?
 end
 
 Dir.chdir bindgen_dir
