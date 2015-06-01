@@ -5,3 +5,4 @@
 main
 target
 .joshenv.fish
+src/postgres.rs
