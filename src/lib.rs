@@ -35,6 +35,12 @@ use postgres::{
     REORDER_BUFFER_CHANGE_DELETE,
 };
 
+pub type CBool = ::libc::c_char;
+const CFalse:CBool = 0 as CBool;
+const CTrue:CBool  = 1 as CBool;
+pub fn to_bool(cbool:CBool) -> bool {
+    cbool != CFalse
+}
 
 #[derive(RustcDecodable, RustcEncodable)]
 pub enum Change {
@@ -131,15 +137,15 @@ pub fn pg_tuple_to_rspgod_tuple(description:TupleDesc, tuple:HeapTuple) -> Wrapp
         let pg_attribute = unsafe { **raw_desc.attrs.offset(n as isize) };
         let name         = extract_string(pg_attribute.attname.data);
 
-        let isnull = &mut (0 as ::libc::c_char);
+        let isnull = &mut CFalse;
         let datum  = unsafe { macrowrap_heap_getattr(tuple, (n as i32) + 1, description, isnull) };
-        if *isnull == (0 as ::libc::c_char) {
+        if to_bool(*isnull) {
+            fields.push(Field { name: name.clone(), value: None });
+        } else {
             fields.push(Field {
                 name:  name.clone(),
                 value: Some(datum_to_string(pg_attribute.atttypid, datum)),
             });
-        } else {
-            fields.push(Field { name: name.clone(), value: None });
         }
     }
 
@@ -167,15 +173,15 @@ pub extern fn pg_decode_shutdown(ctx: &LogicalDecodingContext) {
 fn datum_to_string(typid:Oid, datum:Datum) -> String {
     unsafe {
         let mut output_func = 0;
-        let mut is_varlena  = 0 as ::libc::c_char; // bool
+        let mut is_varlena  = CFalse;
 
         getTypeOutputInfo(typid, &mut output_func, &mut is_varlena);
 
-        let real_datum = if is_varlena == (0 as ::libc::c_char) {
-            datum
-        } else {
+        let real_datum = if to_bool(is_varlena) {
             let toasty = std::mem::transmute(macrowrap_PG_DETOAST_DATUM(datum));
             macrowrap_PointerGetDatum(toasty)
+        } else {
+            datum
         };
 
         /* This looks up the output function by OID on every call. Might be a bit faster
