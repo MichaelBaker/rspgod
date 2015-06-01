@@ -16,11 +16,6 @@ Datum macrowrap_PointerGetDatum(void* datum) {
   return PointerGetDatum(datum);
 }
 
-// 196 #define PG_DETOAST_DATUM(datum) \
-// 197   pg_detoast_datum((struct varlena *)
-//         DatumGetPointer(datum))
-//
-// extern struct varlena *pg_detoast_datum(struct varlena * datum);
 struct varlena* macrowrap_PG_DETOAST_DATUM(Datum datum) {
   return PG_DETOAST_DATUM(datum);
 }

@@ -37,5 +37,3 @@ execute 'Clean the generated file', [
     '-e', 'prev = $_',
     target_file
 ]
-    # pub static mut no_such_variable: ::libc::c_int;
-    # pub static mut no_such_variable: ::libc::c_int;

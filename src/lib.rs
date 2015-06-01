@@ -110,24 +110,6 @@ pub fn extract_string(i8str:[::libc::c_char; 64usize]) -> String {
     str.chars().take_while(|c| *c != '\u{0}').collect()
 }
 
-
-// type TupleDesc = *mut Struct_tupleDesc
-//   which is: struct Struct_tupleDesc {
-//                      natts: ::libc::c_int,
-//                      attrs: *mut Form_pg_attribute,
-//                      tdtypeid: Oid,
-
-// pub struct Struct_HeapTupleData {
-//     pub t_len: uint32,
-//     pub t_self: ItemPointerData,
-//     pub t_tableOid: Oid,
-//     pub t_data: HeapTupleHeader,
-// }
-
-// pub fn heap_getsysattr(tup: HeapTuple, attnum: ::libc::c_int, tupleDesc: TupleDesc, isnull: *mut _bool) -> Datum;
-// pub fn nocachegetattr(tup: HeapTuple, attnum: ::libc::c_int, att: TupleDesc) -> Datum;
-// #define TextDatumGetCString(d) text_to_cstring((text *) DatumGetPointer(d))
-// src/include/access/htup_details.h
 pub fn pg_tuple_to_rspgod_tuple(description:TupleDesc, tuple:HeapTuple) -> WrappedPG {
     let raw_desc         = unsafe { *description };
     let num_attributes   = raw_desc.natts as u32;
