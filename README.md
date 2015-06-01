@@ -26,7 +26,7 @@ Building
   export PG_INCLUDE_DIR=/usr/local/Cellar/postgresql/9.4.1/include/server/
   export BINDGEN=/Users/josh/deleteme/rust-bindgen/target/debug/bindgen
   ```
-* Then you can build the project with `script/plugin`
+* Then you can build the project with `script/build`
 
 
 Notes to self
