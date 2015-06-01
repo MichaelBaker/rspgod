@@ -14,7 +14,18 @@ postgres (PostgreSQL) 9.4.1
 Building
 --------
 
-* You'll need to clone rust-bindgen and build it, then edit script/import with the relevant directories.
+* You'll need an executable for [rust-bindgen](https://crates.io/crates/rust-bindgen).
+  We got ours by building it from source in some other directory.
+* You need to set three environment variables:
+  * `BINDGEN` Path to the bindgen executable.
+  * `DYLD_LIBRARY_PATH` Path to something or other, used by bindgen. On OSX, it's going to be: `/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib`
+  * `PG_INCLUDE_DIR` Path to the Postgresql header files that we compile against.
+
+  ```sh
+  export DYLD_LIBRARY_PATH=/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib
+  export PG_INCLUDE_DIR=/usr/local/Cellar/postgresql/9.4.1/include/server/
+  export BINDGEN=/Users/josh/deleteme/rust-bindgen/target/debug/bindgen
+  ```
 * Then you can build the project with `script/plugin`
 
 

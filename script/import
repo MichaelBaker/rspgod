@@ -1,8 +1,18 @@
 #!/usr/bin/env ruby
 
-dylib_dir      = '/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib'
-pg_include_dir = "/usr/local/Cellar/postgresql/9.4.1/include/server/"
-bindgen_dir    = File.expand_path '../../rust-bindgen', __dir__
+def self.get_env(name)
+  ENV.fetch name do
+    raise ArgumentError, "\e[31mYou need to set the environment variable #{name} before running this script.\e[39m"
+  end
+end
+
+
+# Dirs you need to set
+dylib_dir      = get_env 'DYLD_LIBRARY_PATH'
+pg_include_dir = get_env 'PG_INCLUDE_DIR'
+bindgen        = get_env 'BINDGEN'
+
+# dirs we can figure out ^_^
 rspgod_dir     = File.expand_path '..', __dir__
 target_file    = File.join rspgod_dir, "src", "postgres.rs"
 source_file    = File.join rspgod_dir, 'src', 'headers.h'
@@ -10,22 +20,20 @@ source_file    = File.join rspgod_dir, 'src', 'headers.h'
 
 require 'shellwords'
 require 'pp'
-
-def execute(explanation, command)
+def self.execute(explanation, command)
   $stdout.puts "\e[34m#{explanation}:\n\e[33m#{command.pretty_inspect}\e[39m"
   system command.shelljoin
   exit 1 unless $?.success?
 end
 
-Dir.chdir bindgen_dir
-
 execute 'Transpile C into Rust', [
+  # technically, this is already set, but I like the explicitness
   'env', "DYLD_LIBRARY_PATH=#{dylib_dir}",
 
-  "target/debug/bindgen", "-I", pg_include_dir,
-                          "-o", target_file,
-                          source_file,
-                          "-builtins",
+  bindgen, "-I", pg_include_dir,
+           "-o", target_file,
+           source_file,
+           "-builtins",
 ]
 
 execute 'Clean the generated file', [

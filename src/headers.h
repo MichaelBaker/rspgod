@@ -1,4 +1,3 @@
-// These are all somewhere in /usr/local/Cellar/postgresql/9.4.1/include/
 #include "postgres.h"
 #include "replication/output_plugin.h"
 #include "replication/logical.h"
