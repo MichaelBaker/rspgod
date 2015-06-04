@@ -26,6 +26,7 @@ use postgres::{
     datum_to_string,
     pg_str_to_rs_str,
     parse_attname,
+    get_attribute,
 };
 
 use postgres_bindings::{
@@ -93,7 +94,7 @@ pub fn pg_tuple_to_rspgod_tuple(description:TupleDesc, tuple:HeapTuple) -> Tuple
     let mut fields       = vec![];
 
     for n in 0..num_attributes {
-        let pg_attribute = unsafe { **raw_desc.attrs.offset(n as isize) };
+        let pg_attribute = get_attribute(description, n as isize);
         let name         = parse_attname(pg_attribute.attname.data);
         let type_name    = unsafe { pg_str_to_rs_str(format_type_be(pg_attribute.atttypid)) };
 
