@@ -1,9 +1,10 @@
 #[derive(RustcDecodable, RustcEncodable)]
 pub enum Change {
     Insert  { new_row:  Tuple },
-    Delete  { whatever: String },
-    Update  { whatever: String },
+    Delete  { old_row:  Tuple },
+    Update  { old_row:  Tuple, new_row: Tuple },
     Unknown { whatever: String },
+    Debug   { message:  String },
 }
 
 pub type Tuple = Vec<Field>;

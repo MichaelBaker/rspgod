@@ -63,9 +63,31 @@ pub extern fn pg_decode_change(ctx:      &LogicalDecodingContext,
 
             Change::Insert { new_row: tuple }
         },
-        REORDER_BUFFER_CHANGE_UPDATE => { Change::Update  { whatever: "".to_string() } },
-        REORDER_BUFFER_CHANGE_DELETE => { Change::Delete  { whatever: "".to_string() } },
-        _                            => { Change::Unknown { whatever: "".to_string() } },
+        REORDER_BUFFER_CHANGE_UPDATE => {
+            let new_tuple = pg_tuple_to_rspgod_tuple(
+                unsafe { (*relation).rd_att },
+                unsafe { &mut(*(*change.data.tp()).newtuple).tuple }
+            );
+
+            let old_tuple = pg_tuple_to_rspgod_tuple(
+                unsafe { (*relation).rd_att },
+                unsafe { &mut(*(*change.data.tp()).newtuple).tuple }
+            );
+
+            Change::Update {
+                new_row: new_tuple,
+                old_row: old_tuple,
+            }
+        },
+        REORDER_BUFFER_CHANGE_DELETE => {
+            let tuple = pg_tuple_to_rspgod_tuple(
+                unsafe { (*relation).rd_att },
+                unsafe { &mut(*(*change.data.tp()).oldtuple).tuple }
+            );
+
+            Change::Delete { old_row: tuple }
+        },
+        _ => { Change::Unknown { whatever: "".to_string() } },
     };
 
     let output         = format!("{}", json::encode(&change).unwrap());
