@@ -25,6 +25,7 @@ use types::{
 use postgres::{
     datum_to_string,
     pg_str_to_rs_str,
+    parse_attname,
 };
 
 use postgres_bindings::{
@@ -86,12 +87,6 @@ pub extern fn pg_decode_change(ctx:      &LogicalDecodingContext,
 }
 
 
-pub fn extract_string(i8str:[::libc::c_char; 64usize]) -> String {
-    let u8str:[u8; 64usize] = unsafe { std::mem::transmute(i8str) };
-    let str = String::from_utf8(u8str.to_vec()).unwrap(); // unwrap = danger!
-    str.chars().take_while(|c| *c != '\u{0}').collect()
-}
-
 pub fn pg_tuple_to_rspgod_tuple(description:TupleDesc, tuple:HeapTuple) -> Tuple {
     let raw_desc         = unsafe { *description };
     let num_attributes   = raw_desc.natts as u32;
@@ -99,7 +94,7 @@ pub fn pg_tuple_to_rspgod_tuple(description:TupleDesc, tuple:HeapTuple) -> Tuple
 
     for n in 0..num_attributes {
         let pg_attribute = unsafe { **raw_desc.attrs.offset(n as isize) };
-        let name         = extract_string(pg_attribute.attname.data);
+        let name         = parse_attname(pg_attribute.attname.data);
         let type_name    = unsafe { pg_str_to_rs_str(format_type_be(pg_attribute.atttypid)) };
 
         let isnull = &mut CFalse;

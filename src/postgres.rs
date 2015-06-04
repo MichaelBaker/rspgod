@@ -44,3 +44,9 @@ pub fn pg_str_to_rs_str(pg_str: *mut i8) -> String {
       std::str::from_utf8(slice.to_bytes()).unwrap().to_string()
     }
 }
+
+pub fn parse_attname(i8str:[::libc::c_char; 64usize]) -> String {
+    let u8str:[u8; 64usize] = unsafe { std::mem::transmute(i8str) };
+    let str = String::from_utf8(u8str.to_vec()).unwrap(); // unwrap = danger!
+    str.chars().take_while(|c| *c != '\u{0}').collect()
+}
