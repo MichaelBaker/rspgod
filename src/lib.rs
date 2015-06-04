@@ -9,8 +9,8 @@ extern crate rustc_serialize;
 
 use rustc_serialize::json;
 use std::ffi::CString;
-use std::ffi::CStr;
 
+pub mod postgres;
 pub mod postgres_bindings;
 pub mod types;
 
@@ -18,17 +18,17 @@ use types::{
     Change,
     Tuple,
     Field,
+    CFalse,
+    to_bool,
+};
+
+use postgres::{
+    datum_to_string,
 };
 
 use postgres_bindings::{
     macrowrap_heap_getattr,
-    pfree,
-    getTypeOutputInfo,
     LogicalDecodingContext,
-    macrowrap_PointerGetDatum,
-    Datum,
-    Oid,
-    OidOutputFunctionCall,
     OutputPluginOptions,
     ReorderBufferTXN,
     Relation,
@@ -36,19 +36,11 @@ use postgres_bindings::{
     TupleDesc,
     HeapTuple,
     Struct_StringInfoData,
-    macrowrap_PG_DETOAST_DATUM,
     OUTPUT_PLUGIN_TEXTUAL_OUTPUT,
     REORDER_BUFFER_CHANGE_INSERT,
     REORDER_BUFFER_CHANGE_UPDATE,
     REORDER_BUFFER_CHANGE_DELETE,
 };
-
-pub type CBool = ::libc::c_char;
-const CFalse:CBool = 0 as CBool;
-const CTrue:CBool  = 1 as CBool;
-pub fn to_bool(cbool:CBool) -> bool {
-    cbool != CFalse
-}
 
 extern {
   fn OutputPluginPrepareWrite(ctx: &LogicalDecodingContext, last_write: bool);
@@ -132,32 +124,4 @@ pub extern fn pg_decode_begin_txn(ctx: &LogicalDecodingContext, txn: &ReorderBuf
 
 #[no_mangle]
 pub extern fn pg_decode_shutdown(ctx: &LogicalDecodingContext) {
-}
-
-
-// For any datatypes that we don't know, this function converts them into a string
-// representation (which is always required by a datatype).
-fn datum_to_string(typid:Oid, datum:Datum) -> String {
-    unsafe {
-        let mut output_func = 0;
-        let mut is_varlena  = CFalse;
-
-        getTypeOutputInfo(typid, &mut output_func, &mut is_varlena);
-
-        let real_datum = if to_bool(is_varlena) {
-            let toasty = std::mem::transmute(macrowrap_PG_DETOAST_DATUM(datum));
-            macrowrap_PointerGetDatum(toasty)
-        } else {
-            datum
-        };
-
-        /* This looks up the output function by OID on every call. Might be a bit faster
-         * to do cache the output function info (like how printtup() does it). */
-        let cstr = OidOutputFunctionCall(output_func, real_datum);
-
-        let slice   = CStr::from_ptr(cstr);
-        let to_free = std::mem::transmute(cstr);
-        pfree(to_free);
-        std::str::from_utf8(slice.to_bytes()).unwrap().to_string()
-    }
 }
