@@ -18,31 +18,23 @@ use types::{
     Change,
     Tuple,
     Field,
-    CFalse,
-    to_bool,
 };
 
 use postgres::{
-    datum_to_string,
-    parse_attname,
-    attribute,
-    type_name,
+    pg_tuple_to_rspgod_tuple,
 };
 
 use postgres_bindings::{
-    macrowrap_heap_getattr,
     LogicalDecodingContext,
     OutputPluginOptions,
-    ReorderBufferTXN,
     Relation,
     ReorderBufferChange,
-    TupleDesc,
-    HeapTuple,
+    ReorderBufferTXN,
     Struct_StringInfoData,
     OUTPUT_PLUGIN_TEXTUAL_OUTPUT,
+    REORDER_BUFFER_CHANGE_DELETE,
     REORDER_BUFFER_CHANGE_INSERT,
     REORDER_BUFFER_CHANGE_UPDATE,
-    REORDER_BUFFER_CHANGE_DELETE,
 };
 
 extern {
@@ -87,35 +79,6 @@ pub extern fn pg_decode_change(ctx:      &LogicalDecodingContext,
 }
 
 
-pub fn pg_tuple_to_rspgod_tuple(description:TupleDesc, tuple:HeapTuple) -> Tuple {
-    let raw_desc         = unsafe { *description };
-    let num_attributes   = raw_desc.natts as u32;
-    let mut fields       = vec![];
-
-    for n in 0..num_attributes {
-        let pg_attribute = attribute(description, n as isize);
-        let name         = parse_attname(pg_attribute.attname.data);
-        let type_name    = type_name(pg_attribute);
-
-        let isnull = &mut CFalse;
-        let datum  = unsafe { macrowrap_heap_getattr(tuple, (n as i32) + 1, description, isnull) };
-        if to_bool(*isnull) {
-            fields.push(Field {
-                name:     name.clone(),
-                value:    None,
-                datatype: type_name,
-            });
-        } else {
-            fields.push(Field {
-                name:     name.clone(),
-                value:    Some(datum_to_string(pg_attribute.atttypid, datum)),
-                datatype: type_name,
-            });
-        }
-    }
-
-    fields
-}
 
 #[no_mangle]
 pub extern fn pg_decode_commit_txn(ctx: &LogicalDecodingContext, txn: &ReorderBufferTXN, commit_lsn: u64) {

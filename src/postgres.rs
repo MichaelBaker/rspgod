@@ -1,21 +1,26 @@
 use std;
 use std::ffi::CStr;
 use types::{
-    CFalse,
     to_bool,
+    CFalse,
+    Change,
+    Field,
+    Tuple,
 };
 
 use postgres_bindings::{
-    pfree,
     format_type_be,
     getTypeOutputInfo,
-    macrowrap_PointerGetDatum,
     macrowrap_PG_DETOAST_DATUM,
+    macrowrap_PointerGetDatum,
+    macrowrap_heap_getattr,
+    pfree,
     Datum,
+    HeapTuple,
     Oid,
     OidOutputFunctionCall,
-    TupleDesc,
     Struct_FormData_pg_attribute,
+    TupleDesc,
 };
 
 // For any datatypes that we don't know, this function converts them into a string
@@ -61,4 +66,46 @@ pub fn attribute(description:TupleDesc, attribute_number:isize) -> Struct_FormDa
 
 pub fn type_name(pg_attribute:Struct_FormData_pg_attribute) -> String {
     unsafe { pg_str_to_rs_str(format_type_be(pg_attribute.atttypid)) }
+}
+
+pub fn datum(tuple:HeapTuple, description:TupleDesc, attribute_number: i32) -> Option<Datum> {
+    let isnull = &mut CFalse;
+    let datum  = unsafe { macrowrap_heap_getattr(tuple, attribute_number + 1, description, isnull) };
+
+    if to_bool(*isnull) {
+        None
+    } else {
+        Some(datum)
+    }
+}
+
+pub fn pg_tuple_to_rspgod_tuple(description:TupleDesc, tuple:HeapTuple) -> Tuple {
+    let raw_desc         = unsafe { *description };
+    let num_attributes   = raw_desc.natts as u32;
+    let mut fields       = vec![];
+
+    for n in 0..num_attributes {
+        let pg_attribute = attribute(description, n as isize);
+        let name         = parse_attname(pg_attribute.attname.data);
+        let type_name    = type_name(pg_attribute);
+
+        match datum(tuple, description, n as i32) {
+            None => {
+              fields.push(Field {
+                  name:     name.clone(),
+                  value:    None,
+                  datatype: type_name,
+              });
+            },
+            Some(d) => {
+                fields.push(Field {
+                    name:     name.clone(),
+                    value:    Some(datum_to_string(pg_attribute.atttypid, d)),
+                    datatype: type_name,
+                });
+            }
+        }
+    }
+
+    fields
 }
