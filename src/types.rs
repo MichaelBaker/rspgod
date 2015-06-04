@@ -10,8 +10,9 @@ pub type Tuple = Vec<Field>;
 
 #[derive(RustcDecodable, RustcEncodable)]
 pub struct Field {
-    pub name:  String,
-    pub value: Option<String>,
+    pub name:     String,
+    pub datatype: String,
+    pub value:    Option<String>,
 }
 
 pub type CBool = ::libc::c_char;

@@ -31,13 +31,16 @@ pub fn datum_to_string(typid:Oid, datum:Datum) -> String {
             datum
         };
 
-        /* This looks up the output function by OID on every call. Might be a bit faster
-         * to do cache the output function info (like how printtup() does it). */
-        let cstr = OidOutputFunctionCall(output_func, real_datum);
+        pg_str_to_rs_str(OidOutputFunctionCall(output_func, real_datum))
+    }
+}
 
-        let slice   = CStr::from_ptr(cstr);
-        let to_free = std::mem::transmute(cstr);
-        pfree(to_free);
-        std::str::from_utf8(slice.to_bytes()).unwrap().to_string()
+// You cannot use the input string after you call this function because its memory will have been freed.
+pub fn pg_str_to_rs_str(pg_str: *mut i8) -> String {
+    unsafe {
+      let slice   = CStr::from_ptr(pg_str);
+      let to_free = std::mem::transmute(pg_str);
+      pfree(to_free);
+      std::str::from_utf8(slice.to_bytes()).unwrap().to_string()
     }
 }

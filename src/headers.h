@@ -1,8 +1,9 @@
 #include "postgres.h"
-#include "replication/output_plugin.h"
-#include "replication/logical.h"
-#include "utils/lsyscache.h"
 #include "fmgr.h"
+#include "utils/builtins.h"
+#include "utils/lsyscache.h"
+#include "replication/logical.h"
+#include "replication/output_plugin.h"
 
 Datum macrowrap_heap_getattr(
     HeapTuple tup,
