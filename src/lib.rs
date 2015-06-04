@@ -24,9 +24,8 @@ use types::{
 
 use postgres::{
     datum_to_string,
-    pg_str_to_rs_str,
     parse_attname,
-    get_attribute,
+    attribute,
     type_name,
 };
 
@@ -94,7 +93,7 @@ pub fn pg_tuple_to_rspgod_tuple(description:TupleDesc, tuple:HeapTuple) -> Tuple
     let mut fields       = vec![];
 
     for n in 0..num_attributes {
-        let pg_attribute = get_attribute(description, n as isize);
+        let pg_attribute = attribute(description, n as isize);
         let name         = parse_attname(pg_attribute.attname.data);
         let type_name    = type_name(pg_attribute);
 

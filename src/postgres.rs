@@ -54,7 +54,7 @@ pub fn parse_attname(i8str:[::libc::c_char; 64usize]) -> String {
     str.chars().take_while(|c| *c != '\u{0}').collect()
 }
 
-pub fn get_attribute(description:TupleDesc, attribute_number:isize) -> Struct_FormData_pg_attribute {
+pub fn attribute(description:TupleDesc, attribute_number:isize) -> Struct_FormData_pg_attribute {
     let raw_desc = unsafe { *description };
     unsafe { **raw_desc.attrs.offset(attribute_number) }
 }
