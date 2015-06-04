@@ -26,6 +26,7 @@ Building
   export PG_INCLUDE_DIR=/usr/local/Cellar/postgresql/9.4.1/include/server/
   export BINDGEN=/Users/josh/deleteme/rust-bindgen/target/debug/bindgen
   ```
+* Then you can generate the Postgres library bindings with `script/import`
 * Then you can build the project with `script/build`
 
 
@@ -33,4 +34,3 @@ Notes to self
 -------------
 
 * You must use `no_mangle`, `pub`, and `extern` in order for the rust function to be callable from C.
-* Buy milk

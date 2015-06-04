@@ -11,9 +11,16 @@ use rustc_serialize::json;
 use std::ffi::CString;
 use std::ffi::CStr;
 
-pub mod postgres;
+pub mod postgres_bindings;
+pub mod types;
 
-use postgres::{
+use types::{
+    Change,
+    Tuple,
+    Field,
+};
+
+use postgres_bindings::{
     macrowrap_heap_getattr,
     pfree,
     getTypeOutputInfo,
@@ -28,6 +35,7 @@ use postgres::{
     ReorderBufferChange,
     TupleDesc,
     HeapTuple,
+    Struct_StringInfoData,
     macrowrap_PG_DETOAST_DATUM,
     OUTPUT_PLUGIN_TEXTUAL_OUTPUT,
     REORDER_BUFFER_CHANGE_INSERT,
@@ -42,30 +50,10 @@ pub fn to_bool(cbool:CBool) -> bool {
     cbool != CFalse
 }
 
-#[derive(RustcDecodable, RustcEncodable)]
-pub enum Change {
-    Insert  { new_row: WrappedPG },
-    Delete  { whatever: String },
-    Update  { whatever: String },
-    Unknown { whatever: String },
-}
-
-#[derive(RustcDecodable, RustcEncodable)]
-pub struct WrappedPG {
-    pub num_attributes: u32,
-    pub cells:          Vec<Field>,
-}
-
-#[derive(RustcDecodable, RustcEncodable)]
-pub struct Field {
-    pub name:  String,
-    pub value: Option<String>,
-}
-
 extern {
   fn OutputPluginPrepareWrite(ctx: &LogicalDecodingContext, last_write: bool);
   fn OutputPluginWrite(ctx: &LogicalDecodingContext, last_write: bool);
-  fn appendStringInfoString(str: *mut postgres::Struct_StringInfoData, s: *const i8);
+  fn appendStringInfoString(str: *mut Struct_StringInfoData, s: *const i8);
 }
 
 #[no_mangle]
@@ -110,7 +98,7 @@ pub fn extract_string(i8str:[::libc::c_char; 64usize]) -> String {
     str.chars().take_while(|c| *c != '\u{0}').collect()
 }
 
-pub fn pg_tuple_to_rspgod_tuple(description:TupleDesc, tuple:HeapTuple) -> WrappedPG {
+pub fn pg_tuple_to_rspgod_tuple(description:TupleDesc, tuple:HeapTuple) -> Tuple {
     let raw_desc         = unsafe { *description };
     let num_attributes   = raw_desc.natts as u32;
     let mut fields       = vec![];
@@ -131,10 +119,7 @@ pub fn pg_tuple_to_rspgod_tuple(description:TupleDesc, tuple:HeapTuple) -> Wrapp
         }
     }
 
-    WrappedPG {
-        num_attributes: num_attributes,
-        cells:          fields,
-    }
+    fields
 }
 
 #[no_mangle]

@@ -5,4 +5,4 @@
 main
 target
 .joshenv.fish
-src/postgres.rs
+src/postgres_bindings.rs
