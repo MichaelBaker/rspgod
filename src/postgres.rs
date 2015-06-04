@@ -7,6 +7,7 @@ use types::{
 
 use postgres_bindings::{
     pfree,
+    format_type_be,
     getTypeOutputInfo,
     macrowrap_PointerGetDatum,
     macrowrap_PG_DETOAST_DATUM,
@@ -56,4 +57,8 @@ pub fn parse_attname(i8str:[::libc::c_char; 64usize]) -> String {
 pub fn get_attribute(description:TupleDesc, attribute_number:isize) -> Struct_FormData_pg_attribute {
     let raw_desc = unsafe { *description };
     unsafe { **raw_desc.attrs.offset(attribute_number) }
+}
+
+pub fn type_name(pg_attribute:Struct_FormData_pg_attribute) -> String {
+    unsafe { pg_str_to_rs_str(format_type_be(pg_attribute.atttypid)) }
 }
