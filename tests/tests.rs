@@ -12,11 +12,6 @@ struct TestRecord {
     name: String,
 }
 
-#[derive(Debug)]
-struct LDUpdate {
-    data: String,
-}
-
 #[test]
 fn sanity_test() {
     with_clean_database(|c| {
@@ -40,7 +35,7 @@ fn basic_insert() {
         create_record(c, &record);
         let updates = fetch_updates(c);
         assert_eq!(updates.len(), 1);
-        let change:Change = json::decode(&updates[0].data[..]).unwrap();
+        let change:Change = json::decode(&updates[0][..]).unwrap();
         assert!(match change {
             Change::Insert {..} => { true },
             _                   => { false },
@@ -52,11 +47,11 @@ fn basic_insert() {
 // [TODO] I want to move a lot of these into a utility module when I can figure out how to do that
 //
 
-fn fetch_updates(c: &Connection) -> Vec<LDUpdate> {
+fn fetch_updates(c: &Connection) -> Vec<String> {
     let stmt = c.prepare("SELECT * FROM pg_logical_slot_peek_changes('slot', NULL, NULL)").unwrap();
     let mut result = vec![];
     for r in stmt.query(&[]).unwrap() {
-        result.push(LDUpdate { data: r.get(2) });
+        result.push(r.get(2));
     }
     result
 }
