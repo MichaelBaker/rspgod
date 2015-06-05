@@ -17,7 +17,7 @@ fn sanity_test() {
     with_clean_database(|c| {
         let records = vec![
             TestRecord { id: 1, name: "Michael Baker".to_string() },
-            TestRecord { id: 2, name: "Josh Cheek".to_string(),   },
+            TestRecord { id: 2, name: "Josh Cheek".to_string()   },
         ];
 
         for record in records.iter() {
@@ -31,7 +31,7 @@ fn sanity_test() {
 #[test]
 fn basic_insert() {
     with_slot(|c| {
-        let record = TestRecord {id: 1, name: "Michael Baker".to_string(), };
+        let record = TestRecord { id: 1, name: "Michael Baker".to_string(), };
         create_record(c, &record);
         let updates = fetch_updates(c);
         assert_eq!(updates.len(), 1);
@@ -46,7 +46,7 @@ fn basic_insert() {
 #[test]
 fn basic_delete() {
     with_slot(|c| {
-        let record = TestRecord {id: 1, name: "Michael Baker".to_string(), };
+        let record = TestRecord { id: 1, name: "Michael Baker".to_string() };
         create_record(c, &record);
         delete_record(c, 1);
         let updates = fetch_updates(c);
@@ -54,6 +54,22 @@ fn basic_delete() {
         let change:Change = json::decode(&updates[1][..]).unwrap();
         assert!(match change {
             Change::Delete {..} => { true },
+            _                   => { false },
+        });
+    });
+}
+
+#[test]
+fn basic_update() {
+    with_slot(|c| {
+        let record = TestRecord { id: 1, name: "Michael Baker".to_string() };
+        create_record(c, &record);
+        update_record(c, TestRecord { id: 1, name: "Bichael Maker".to_string() });
+        let updates = fetch_updates(c);
+        assert_eq!(updates.len(), 2);
+        let change:Change = json::decode(&updates[1][..]).unwrap();
+        assert!(match change {
+            Change::Update {..} => { true },
             _                   => { false },
         });
     });
@@ -132,6 +148,11 @@ fn create_record(c: &Connection, r: &TestRecord) {
 fn delete_record(c: &Connection, id: i32) {
     let stmt = c.prepare("delete from test_table where id = $1").unwrap();
     stmt.execute(&[&id]).unwrap();
+}
+
+fn update_record(c: &Connection, new_record: TestRecord) {
+    let stmt = c.prepare("update test_table set name = $2 where id = $1").unwrap();
+    stmt.execute(&[&new_record.id, &new_record.name]).unwrap();
 }
 
 fn drop_database(c: &Connection) {
