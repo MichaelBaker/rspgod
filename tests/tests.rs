@@ -1,10 +1,8 @@
-extern crate rspgod;
 extern crate postgres;
 extern crate rustc_serialize;
 
 use postgres::{Connection, SslMode};
-use rspgod::types::{Change};
-use rustc_serialize::json;
+use rustc_serialize::json::Json;
 
 #[derive(Debug)]
 struct TestRecord {
@@ -35,11 +33,10 @@ fn basic_insert() {
         create_record(c, &record);
         let updates = fetch_updates(c);
         assert_eq!(updates.len(), 1);
-        let change:Change = json::decode(&updates[0][..]).unwrap();
-        assert!(match change {
-            Change::Insert {..} => { true },
-            _                   => { false },
-        });
+        let data = Json::from_str(&updates[0][..]).unwrap();
+        let change = data.as_object().unwrap();
+        let variant = change.get("variant").unwrap().as_string().unwrap();
+        assert_eq!(variant, "Insert");
     });
 }
 
@@ -51,11 +48,10 @@ fn basic_delete() {
         delete_record(c, 1);
         let updates = fetch_updates(c);
         assert_eq!(updates.len(), 2);
-        let change:Change = json::decode(&updates[1][..]).unwrap();
-        assert!(match change {
-            Change::Delete {..} => { true },
-            _                   => { false },
-        });
+        let data = Json::from_str(&updates[1][..]).unwrap();
+        let change = data.as_object().unwrap();
+        let variant = change.get("variant").unwrap().as_string().unwrap();
+        assert_eq!(variant, "Delete");
     });
 }
 
@@ -67,11 +63,10 @@ fn basic_update() {
         update_record(c, TestRecord { id: 1, name: "Bichael Maker".to_string() });
         let updates = fetch_updates(c);
         assert_eq!(updates.len(), 2);
-        let change:Change = json::decode(&updates[1][..]).unwrap();
-        assert!(match change {
-            Change::Update {..} => { true },
-            _                   => { false },
-        });
+        let data = Json::from_str(&updates[1][..]).unwrap();
+        let change = data.as_object().unwrap();
+        let variant = change.get("variant").unwrap().as_string().unwrap();
+        assert_eq!(variant, "Update");
     });
 }
 
