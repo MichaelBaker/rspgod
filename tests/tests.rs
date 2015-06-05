@@ -1,13 +1,20 @@
+extern crate rspgod;
 extern crate postgres;
+extern crate rustc_serialize;
 
 use postgres::{Connection, SslMode};
-use std::thread;
-
+use rspgod::types::{Change};
+use rustc_serialize::json;
 
 #[derive(Debug)]
 struct TestRecord {
     id:   i32,
     name: String,
+}
+
+#[derive(Debug)]
+struct LDUpdate {
+    data: String,
 }
 
 #[test]
@@ -27,18 +34,32 @@ fn sanity_test() {
 }
 
 #[test]
-fn basic_logical_decoding() {
-    with_clean_database(|c| {
+fn basic_insert() {
+    with_slot(|c| {
         let record = TestRecord {id: 1, name: "Michael Baker".to_string(), };
-        drop_slot(c);
-        create_slot(c);
         create_record(c, &record);
+        let updates = fetch_updates(c);
+        assert_eq!(updates.len(), 1);
+        let change:Change = json::decode(&updates[0].data[..]).unwrap();
+        assert!(match change {
+            Change::Insert {..} => { true },
+            _                   => { false },
+        });
     });
 }
 
 //
 // [TODO] I want to move a lot of these into a utility module when I can figure out how to do that
 //
+
+fn fetch_updates(c: &Connection) -> Vec<LDUpdate> {
+    let stmt = c.prepare("SELECT * FROM pg_logical_slot_peek_changes('slot', NULL, NULL)").unwrap();
+    let mut result = vec![];
+    for r in stmt.query(&[]).unwrap() {
+        result.push(LDUpdate { data: r.get(2) });
+    }
+    result
+}
 
 fn create_slot(c: &Connection) {
     let stmt = c.prepare("select * from pg_create_logical_replication_slot('slot', 'thingy')").unwrap();
@@ -47,7 +68,18 @@ fn create_slot(c: &Connection) {
 
 fn drop_slot(c: &Connection) {
     let stmt = c.prepare("select pg_drop_replication_slot('slot')").unwrap();
-    stmt.execute(&[]).unwrap();
+    match stmt.execute(&[]) {
+        _ => {},
+    }
+}
+
+fn with_slot<F>(f: F) where F:Fn(&Connection) -> () {
+    with_clean_database(|c| {
+        drop_slot(c);
+        create_slot(c);
+        f(c);
+        drop_slot(c);
+    });
 }
 
 fn with_clean_database<F>(f: F) where F:Fn(&Connection) -> () {

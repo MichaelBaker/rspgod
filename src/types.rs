@@ -1,4 +1,4 @@
-#[derive(RustcDecodable, RustcEncodable)]
+#[derive(RustcDecodable, RustcEncodable, Debug)]
 pub enum Change {
     Insert  { new_row:  Tuple },
     Delete  { old_row:  Tuple },
@@ -9,7 +9,7 @@ pub enum Change {
 
 pub type Tuple = Vec<Field>;
 
-#[derive(RustcDecodable, RustcEncodable)]
+#[derive(RustcDecodable, RustcEncodable, Debug)]
 pub struct Field {
     pub name:     String,
     pub datatype: String,

@@ -5,7 +5,10 @@ authors = ["Michael Baker <michaeltbaker@gmail.com>"]
 
 [lib]
 name       = "rspgod"
-crate-type = ["staticlib"]
+crate-type = ["staticlib", "rlib"]
+path       = "src/lib.rs"
+test       = false
+bench      = false
 
 [dependencies.libc]
 version = "0.1.*"
