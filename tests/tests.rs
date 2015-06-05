@@ -43,6 +43,22 @@ fn basic_insert() {
     });
 }
 
+#[test]
+fn basic_delete() {
+    with_slot(|c| {
+        let record = TestRecord {id: 1, name: "Michael Baker".to_string(), };
+        create_record(c, &record);
+        delete_record(c, 1);
+        let updates = fetch_updates(c);
+        assert_eq!(updates.len(), 2);
+        let change:Change = json::decode(&updates[1][..]).unwrap();
+        assert!(match change {
+            Change::Delete {..} => { true },
+            _                   => { false },
+        });
+    });
+}
+
 //
 // [TODO] I want to move a lot of these into a utility module when I can figure out how to do that
 //
@@ -111,6 +127,11 @@ fn create_record(c: &Connection, r: &TestRecord) {
         &r.id,
         &r.name,
     ]).unwrap();
+}
+
+fn delete_record(c: &Connection, id: i32) {
+    let stmt = c.prepare("delete from test_table where id = $1").unwrap();
+    stmt.execute(&[&id]).unwrap();
 }
 
 fn drop_database(c: &Connection) {
