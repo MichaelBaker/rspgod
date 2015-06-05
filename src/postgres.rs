@@ -3,7 +3,6 @@ use std::ffi::CStr;
 use types::{
     to_bool,
     CFalse,
-    Change,
     Field,
     Tuple,
 };

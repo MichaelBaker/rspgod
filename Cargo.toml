@@ -12,3 +12,6 @@ version = "0.1.*"
 
 [dependencies.rustc-serialize]
 version = "0.3.14"
+
+[dependencies]
+postgres = "0.9"

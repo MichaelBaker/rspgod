@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+
+ POSTGRES_URL=postgres://michaeltbaker@localhost:5432/test cargo test -- --nocapture

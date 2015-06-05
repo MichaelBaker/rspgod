@@ -16,8 +16,6 @@ pub mod types;
 
 use types::{
     Change,
-    Tuple,
-    Field,
 };
 
 use postgres::{
