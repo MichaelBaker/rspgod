@@ -5,7 +5,6 @@ mod utils;
 
 use rustc_serialize::json::Json;
 use utils::{
-    create_record,
     delete_record,
     execute,
     fetch_records,
@@ -19,15 +18,8 @@ use utils::{
 #[test]
 fn sanity_test() {
     with_table("test_table", "id int primary key, name text", |c| {
-        let records = vec![
-            TestRecord { id: 1, name: "Michael Baker".to_string() },
-            TestRecord { id: 2, name: "Josh Cheek".to_string()   },
-        ];
-
-        for record in records.iter() {
-            create_record(c, &record);
-        }
-
+        execute(c, "insert into test_table (id, name) values ($1, $2)", &[&1, &"Michael Baker"]);
+        execute(c, "insert into test_table (id, name) values ($1, $2)", &[&2, &"Josh Cheek"]);
         fetch_records(c);
     });
 }
@@ -35,8 +27,7 @@ fn sanity_test() {
 #[test]
 fn basic_insert() {
     with_slot("test_table", "id int primary key, name text", |c| {
-        let record = TestRecord { id: 1, name: "Michael Baker".to_string(), };
-        create_record(c, &record);
+        execute(c, "insert into test_table (id, name) values ($1, $2)", &[&1, &"Michael Baker"]);
         let updates = fetch_updates(c);
         assert_eq!(updates.len(), 1);
         let data = Json::from_str(&updates[0][..]).unwrap();
@@ -49,8 +40,7 @@ fn basic_insert() {
 #[test]
 fn basic_delete() {
     with_slot("test_table", "id int primary key, name text", |c| {
-        let record = TestRecord { id: 1, name: "Michael Baker".to_string() };
-        create_record(c, &record);
+        execute(c, "insert into test_table (id, name) values ($1, $2)", &[&1, &"Michael Baker"]);
         delete_record(c, 1);
         let updates = fetch_updates(c);
         assert_eq!(updates.len(), 2);
@@ -64,8 +54,7 @@ fn basic_delete() {
 #[test]
 fn basic_update() {
     with_slot("test_table", "id int primary key, name text", |c| {
-        let record = TestRecord { id: 1, name: "Michael Baker".to_string() };
-        create_record(c, &record);
+        execute(c, "insert into test_table (id, name) values ($1, $2)", &[&1, &"Michael Baker"]);
         update_record(c, TestRecord { id: 1, name: "Bichael Maker".to_string() });
         let updates = fetch_updates(c);
         assert_eq!(updates.len(), 2);
