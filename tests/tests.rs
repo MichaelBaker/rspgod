@@ -1,9 +1,3 @@
-extern crate postgres;
-extern crate rustc_serialize;
-
-mod utils;
-
-use rustc_serialize::json::Json;
 use utils::{
     execute,
     fetch_updates,
@@ -26,8 +20,7 @@ fn basic_insert() {
         execute(c, "insert into test_table (id, name) values ($1, $2)", &[&1, &"Michael Baker"]);
         let updates = fetch_updates(c);
         assert_eq!(updates.len(), 1);
-        let data = Json::from_str(&updates[0][..]).unwrap();
-        let change = data.as_object().unwrap();
+        let change = updates[0].as_object().unwrap();
         let variant = change.get("variant").unwrap().as_string().unwrap();
         assert_eq!(variant, "Insert");
     });
@@ -40,8 +33,7 @@ fn basic_delete() {
         execute(c, "delete from test_table", &[]);
         let updates = fetch_updates(c);
         assert_eq!(updates.len(), 2);
-        let data = Json::from_str(&updates[1][..]).unwrap();
-        let change = data.as_object().unwrap();
+        let change = updates[1].as_object().unwrap();
         let variant = change.get("variant").unwrap().as_string().unwrap();
         assert_eq!(variant, "Delete");
     });
@@ -54,8 +46,7 @@ fn basic_update() {
         execute(c, "update test_table set name = 'Bichael Maker'", &[]);
         let updates = fetch_updates(c);
         assert_eq!(updates.len(), 2);
-        let data = Json::from_str(&updates[1][..]).unwrap();
-        let change = data.as_object().unwrap();
+        let change = updates[1].as_object().unwrap();
         let variant = change.get("variant").unwrap().as_string().unwrap();
         assert_eq!(variant, "Update");
     });

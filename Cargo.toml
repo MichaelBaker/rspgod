@@ -12,7 +12,7 @@ bench      = false
 
 [[test]]
 name = "tests"
-path = "tests/tests.rs"
+path = "tests/lib.rs"
 
 [dependencies.libc]
 version = "0.1.*"

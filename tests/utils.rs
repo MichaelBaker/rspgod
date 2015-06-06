@@ -1,6 +1,7 @@
 use std::env;
 use postgres::{Connection, SslMode};
 use postgres::types::{ToSql};
+use rustc_serialize::json::Json;
 
 pub fn execute(c: &Connection, command: &str, args: &[&ToSql]) {
     let stmt = c.prepare(command).unwrap();
@@ -12,9 +13,12 @@ pub fn execute_silent(c: &Connection, command: &str, args: &[&ToSql]) {
     match stmt.execute(args) { _ => {} };
 }
 
-pub fn fetch_updates(c: &Connection) -> Vec<String> {
+pub fn fetch_updates(c: &Connection) -> Vec<Json> {
     let stmt = c.prepare("SELECT * FROM pg_logical_slot_peek_changes('slot', NULL, NULL)").unwrap();
-    stmt.query(&[]).unwrap().iter().map(|r| { r.get(2) }).collect()
+    stmt.query(&[]).unwrap().iter().map(|r| {
+        let data:String = r.get(2);
+        Json::from_str(&data[..]).unwrap()
+    }).collect()
 }
 
 pub fn create_slot(c: &Connection) {
