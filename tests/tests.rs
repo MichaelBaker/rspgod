@@ -139,11 +139,10 @@ fn fetch_records(c: &Connection) -> Vec<TestRecord> {
 }
 
 fn create_record(c: &Connection, r: &TestRecord) {
-    let stmt = c.prepare("insert into test_table (id, name) values ($1, $2)").unwrap();
-    stmt.execute(&[
+    execute(c, "insert into test_table (id, name) values ($1, $2)", &[
         &r.id,
         &r.name,
-    ]).unwrap();
+    ]);
 }
 
 fn delete_record(c: &Connection, id: i32) {
@@ -151,8 +150,10 @@ fn delete_record(c: &Connection, id: i32) {
 }
 
 fn update_record(c: &Connection, new_record: TestRecord) {
-    let stmt = c.prepare("update test_table set name = $2 where id = $1").unwrap();
-    stmt.execute(&[&new_record.id, &new_record.name]).unwrap();
+    execute(c, "update test_table set name = $2 where id = $1", &[
+        &new_record.id,
+        &new_record.name
+    ]);
 }
 
 fn drop_database(c: &Connection) {
