@@ -56,17 +56,6 @@ pub fn create_database(c: &Connection, table_name: &str, columns: &str) {
     execute(c, &format!("create table {} ({})", table_name, columns), &[]);
 }
 
-pub fn fetch_records(c: &Connection) -> Vec<TestRecord> {
-    let stmt = c.prepare("select id, name from test_table").unwrap();
-    let results = stmt.query(&[]).unwrap();
-    results.iter().map(|r| {
-        TestRecord {
-            id:   r.get(0),
-            name: r.get(1),
-        }
-    }).collect()
-}
-
 pub fn update_record(c: &Connection, new_record: TestRecord) {
     execute(c, "update test_table set name = $2 where id = $1", &[
         &new_record.id,

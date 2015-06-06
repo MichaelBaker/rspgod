@@ -6,7 +6,6 @@ mod utils;
 use rustc_serialize::json::Json;
 use utils::{
     execute,
-    fetch_records,
     fetch_updates,
     update_record,
     with_slot,
@@ -19,7 +18,7 @@ fn sanity_test() {
     with_table("test_table", "id int primary key, name text", |c| {
         execute(c, "insert into test_table (id, name) values ($1, $2)", &[&1, &"Michael Baker"]);
         execute(c, "insert into test_table (id, name) values ($1, $2)", &[&2, &"Josh Cheek"]);
-        fetch_records(c);
+        execute(c, "select * from test_table", &[]);
     });
 }
 
