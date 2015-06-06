@@ -2,6 +2,7 @@ extern crate postgres;
 extern crate rustc_serialize;
 
 use postgres::{Connection, SslMode};
+use postgres::types::{ToSql};
 use rustc_serialize::json::Json;
 
 #[derive(Debug)]
@@ -74,6 +75,16 @@ fn basic_update() {
 // [TODO] I want to move a lot of these into a utility module when I can figure out how to do that
 //
 
+fn execute(c: &Connection, command: &str, args: &[&ToSql]) {
+    let stmt = c.prepare(command).unwrap();
+    stmt.execute(args).unwrap();
+}
+
+fn execute_silent(c: &Connection, command: &str, args: &[&ToSql]) {
+    let stmt = c.prepare(command).unwrap();
+    match stmt.execute(args) { _ => {} };
+}
+
 fn fetch_updates(c: &Connection) -> Vec<String> {
     let stmt = c.prepare("SELECT * FROM pg_logical_slot_peek_changes('slot', NULL, NULL)").unwrap();
     let mut result = vec![];
@@ -84,15 +95,11 @@ fn fetch_updates(c: &Connection) -> Vec<String> {
 }
 
 fn create_slot(c: &Connection) {
-    let stmt = c.prepare("select * from pg_create_logical_replication_slot('slot', 'thingy')").unwrap();
-    stmt.execute(&[]).unwrap();
+    execute(c, "select * from pg_create_logical_replication_slot('slot', 'thingy')", &[]);
 }
 
 fn drop_slot(c: &Connection) {
-    let stmt = c.prepare("select pg_drop_replication_slot('slot')").unwrap();
-    match stmt.execute(&[]) {
-        _ => {},
-    }
+    execute_silent(c, "select pg_drop_replication_slot('slot')", &[]);
 }
 
 fn with_slot<F>(f: F) where F:Fn(&Connection) -> () {
@@ -117,8 +124,7 @@ fn reset_database(c: &Connection) {
 }
 
 fn create_database(c: &Connection) {
-    let stmt = c.prepare("create table test_table (id int primary key, name text)").unwrap();
-    stmt.execute(&[]).unwrap();
+    execute(c, "create table test_table (id int primary key, name text)", &[]);
 }
 
 fn fetch_records(c: &Connection) -> Vec<TestRecord> {
@@ -141,8 +147,7 @@ fn create_record(c: &Connection, r: &TestRecord) {
 }
 
 fn delete_record(c: &Connection, id: i32) {
-    let stmt = c.prepare("delete from test_table where id = $1").unwrap();
-    stmt.execute(&[&id]).unwrap();
+    execute(c, "delete from test_table where id = $1", &[&id]);
 }
 
 fn update_record(c: &Connection, new_record: TestRecord) {
@@ -151,8 +156,7 @@ fn update_record(c: &Connection, new_record: TestRecord) {
 }
 
 fn drop_database(c: &Connection) {
-    let stmt = c.prepare("drop table if exists test_table").unwrap();
-    stmt.execute(&[]).unwrap();
+    execute(c, "drop table if exists test_table", &[]);
 }
 
 fn connection_string() -> String {
