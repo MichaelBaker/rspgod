@@ -2,12 +2,6 @@ use std::env;
 use postgres::{Connection, SslMode};
 use postgres::types::{ToSql};
 
-#[derive(Debug)]
-pub struct TestRecord {
-    pub id:   i32,
-    pub name: String,
-}
-
 pub fn execute(c: &Connection, command: &str, args: &[&ToSql]) {
     let stmt = c.prepare(command).unwrap();
     stmt.execute(args).unwrap();
@@ -54,13 +48,6 @@ pub fn reset_database(c: &Connection, table_name: &str, columns: &str) {
 
 pub fn create_database(c: &Connection, table_name: &str, columns: &str) {
     execute(c, &format!("create table {} ({})", table_name, columns), &[]);
-}
-
-pub fn update_record(c: &Connection, new_record: TestRecord) {
-    execute(c, "update test_table set name = $2 where id = $1", &[
-        &new_record.id,
-        &new_record.name
-    ]);
 }
 
 pub fn drop_database(c: &Connection, table_name: &str) {

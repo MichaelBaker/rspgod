@@ -7,10 +7,8 @@ use rustc_serialize::json::Json;
 use utils::{
     execute,
     fetch_updates,
-    update_record,
     with_slot,
     with_table,
-    TestRecord,
 };
 
 #[test]
@@ -53,7 +51,7 @@ fn basic_delete() {
 fn basic_update() {
     with_slot("test_table", "id int primary key, name text", |c| {
         execute(c, "insert into test_table (id, name) values ($1, $2)", &[&1, &"Michael Baker"]);
-        update_record(c, TestRecord { id: 1, name: "Bichael Maker".to_string() });
+        execute(c, "update test_table set name = 'Bichael Maker'", &[]);
         let updates = fetch_updates(c);
         assert_eq!(updates.len(), 2);
         let data = Json::from_str(&updates[1][..]).unwrap();
