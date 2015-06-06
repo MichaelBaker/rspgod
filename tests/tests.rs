@@ -87,11 +87,7 @@ fn execute_silent(c: &Connection, command: &str, args: &[&ToSql]) {
 
 fn fetch_updates(c: &Connection) -> Vec<String> {
     let stmt = c.prepare("SELECT * FROM pg_logical_slot_peek_changes('slot', NULL, NULL)").unwrap();
-    let mut result = vec![];
-    for r in stmt.query(&[]).unwrap() {
-        result.push(r.get(2));
-    }
-    result
+    stmt.query(&[]).unwrap().iter().map(|r| { r.get(2) }).collect()
 }
 
 fn create_slot(c: &Connection) {
