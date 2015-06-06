@@ -13,7 +13,7 @@ struct TestRecord {
 
 #[test]
 fn sanity_test() {
-    with_clean_database(|c| {
+    with_clean_database("test_table", "id int primary key, name text", |c| {
         let records = vec![
             TestRecord { id: 1, name: "Michael Baker".to_string() },
             TestRecord { id: 2, name: "Josh Cheek".to_string()   },
@@ -29,7 +29,7 @@ fn sanity_test() {
 
 #[test]
 fn basic_insert() {
-    with_slot(|c| {
+    with_slot("test_table", "id int primary key, name text", |c| {
         let record = TestRecord { id: 1, name: "Michael Baker".to_string(), };
         create_record(c, &record);
         let updates = fetch_updates(c);
@@ -43,7 +43,7 @@ fn basic_insert() {
 
 #[test]
 fn basic_delete() {
-    with_slot(|c| {
+    with_slot("test_table", "id int primary key, name text", |c| {
         let record = TestRecord { id: 1, name: "Michael Baker".to_string() };
         create_record(c, &record);
         delete_record(c, 1);
@@ -58,7 +58,7 @@ fn basic_delete() {
 
 #[test]
 fn basic_update() {
-    with_slot(|c| {
+    with_slot("test_table", "id int primary key, name text", |c| {
         let record = TestRecord { id: 1, name: "Michael Baker".to_string() };
         create_record(c, &record);
         update_record(c, TestRecord { id: 1, name: "Bichael Maker".to_string() });
@@ -68,6 +68,17 @@ fn basic_update() {
         let change = data.as_object().unwrap();
         let variant = change.get("variant").unwrap().as_string().unwrap();
         assert_eq!(variant, "Update");
+    });
+}
+
+#[test]
+// The output decoder does not emit any changes for deletions from a table without a primary key.
+// This is because Postgres doesn't give the decoder any tuple information in this scenario.
+fn delete_without_primary_key() {
+    with_slot("no_primary_table", "id int, name text, whatever float", |c| {
+        execute(c, "insert into no_primary_table (id, name, whatever) values ($1, $2, $3)", &[&1, &"hello", &3.2]);
+        execute(c, "delete from no_primary_table where id = 1", &[]);
+        assert_eq!(fetch_updates(c).len(), 1);
     });
 }
 
@@ -98,8 +109,8 @@ fn drop_slot(c: &Connection) {
     execute_silent(c, "select pg_drop_replication_slot('slot')", &[]);
 }
 
-fn with_slot<F>(f: F) where F:Fn(&Connection) -> () {
-    with_clean_database(|c| {
+fn with_slot<F>(table_name: &str, columns: &str, f: F) where F:Fn(&Connection) -> () {
+    with_clean_database(table_name, columns, |c| {
         drop_slot(c);
         create_slot(c);
         f(c);
@@ -107,20 +118,20 @@ fn with_slot<F>(f: F) where F:Fn(&Connection) -> () {
     });
 }
 
-fn with_clean_database<F>(f: F) where F:Fn(&Connection) -> () {
+fn with_clean_database<F>(table_name: &str, columns: &str, f: F) where F:Fn(&Connection) -> () {
     let c = connection();
-    reset_database(&c);
+    reset_database(&c, table_name, columns);
     f(&c);
-    drop_database(&c);
+    drop_database(&c, table_name);
 }
 
-fn reset_database(c: &Connection) {
-    drop_database(&c);
-    create_database(&c);
+fn reset_database(c: &Connection, table_name: &str, columns: &str) {
+    drop_database(&c, table_name);
+    create_database(&c, table_name, columns);
 }
 
-fn create_database(c: &Connection) {
-    execute(c, "create table test_table (id int primary key, name text)", &[]);
+fn create_database(c: &Connection, table_name: &str, columns: &str) {
+    execute(c, &format!("create table {} ({})", table_name, columns), &[]);
 }
 
 fn fetch_records(c: &Connection) -> Vec<TestRecord> {
@@ -152,8 +163,8 @@ fn update_record(c: &Connection, new_record: TestRecord) {
     ]);
 }
 
-fn drop_database(c: &Connection) {
-    execute(c, "drop table if exists test_table", &[]);
+fn drop_database(c: &Connection, table_name: &str) {
+    execute(c, &format!("drop table if exists {}", table_name), &[]);
 }
 
 fn connection_string() -> String {

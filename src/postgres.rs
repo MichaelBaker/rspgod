@@ -20,6 +20,7 @@ use postgres_bindings::{
     OidOutputFunctionCall,
     Struct_FormData_pg_attribute,
     TupleDesc,
+    ReorderBufferTupleBuf,
 };
 
 // For any datatypes that we don't know, this function converts them into a string
@@ -78,7 +79,12 @@ pub fn datum(tuple:HeapTuple, description:TupleDesc, attribute_number: i32) -> O
     }
 }
 
-pub fn pg_tuple_to_rspgod_tuple(description:TupleDesc, tuple:HeapTuple) -> Tuple {
+pub fn pg_tuple_to_rspgod_tuple(description:TupleDesc, heap:*mut ReorderBufferTupleBuf) -> Option<Tuple> {
+    if heap.is_null() {
+        return None;
+    }
+
+    let tuple            = unsafe { &mut (*heap).tuple };
     let raw_desc         = unsafe { *description };
     let num_attributes   = raw_desc.natts as u32;
     let mut fields       = vec![];
@@ -106,5 +112,5 @@ pub fn pg_tuple_to_rspgod_tuple(description:TupleDesc, tuple:HeapTuple) -> Tuple
         }
     }
 
-    fields
+    Some(fields)
 }

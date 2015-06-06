@@ -56,46 +56,60 @@ pub extern fn pg_decode_change(ctx:      &LogicalDecodingContext,
         REORDER_BUFFER_CHANGE_INSERT => {
             let tuple = pg_tuple_to_rspgod_tuple(
                 unsafe { (*relation).rd_att },
-                unsafe { &mut(*(*change.data.tp()).newtuple).tuple }
+                unsafe { (*change.data.tp()).newtuple }
             );
 
-            Change::Insert { new_row: tuple }
+            match tuple {
+                Some(t) => { Some(Change::Insert { new_row: t }) },
+                None    => { None },
+            }
         },
         REORDER_BUFFER_CHANGE_UPDATE => {
             let new_tuple = pg_tuple_to_rspgod_tuple(
                 unsafe { (*relation).rd_att },
-                unsafe { &mut(*(*change.data.tp()).newtuple).tuple }
+                unsafe { (*change.data.tp()).newtuple }
             );
 
             let old_tuple = pg_tuple_to_rspgod_tuple(
                 unsafe { (*relation).rd_att },
-                unsafe { &mut(*(*change.data.tp()).newtuple).tuple }
+                unsafe { (*change.data.tp()).newtuple }
             );
 
-            Change::Update {
-                new_row: new_tuple,
-                old_row: old_tuple,
+            match (new_tuple, old_tuple) {
+                (Some(n), Some(o)) => {
+                    Some(Change::Update { new_row: n, old_row: o })
+                },
+                _ => { None },
             }
         },
         REORDER_BUFFER_CHANGE_DELETE => {
             let tuple = pg_tuple_to_rspgod_tuple(
                 unsafe { (*relation).rd_att },
-                unsafe { &mut(*(*change.data.tp()).oldtuple).tuple }
+                unsafe { (*change.data.tp()).oldtuple }
             );
 
-            Change::Delete { old_row: tuple }
+            match tuple {
+                Some(t) => { Some(Change::Delete { old_row: t }) },
+                None    => { None },
+            }
         },
-        _ => { Change::Unknown { whatever: "".to_string() } },
+        _ => { None },
     };
 
-    let output         = format!("{}", json::encode(&change).unwrap());
-    let c_tuple_string = CString::new(&output[..]).unwrap();
+    match change {
+        None    => {},
+        Some(c) => {
+            let output         = format!("{}", json::encode(&c).unwrap());
+            let c_tuple_string = CString::new(&output[..]).unwrap();
 
-    unsafe {
-        OutputPluginPrepareWrite(ctx, true);
-        appendStringInfoString(ctx.out, c_tuple_string.as_ptr());
-        OutputPluginWrite(ctx, true);
+            unsafe {
+                OutputPluginPrepareWrite(ctx, true);
+                appendStringInfoString(ctx.out, c_tuple_string.as_ptr());
+                OutputPluginWrite(ctx, true);
+            }
+        }
     }
+
 }
 
 
