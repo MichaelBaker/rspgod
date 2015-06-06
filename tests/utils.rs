@@ -67,10 +67,6 @@ pub fn fetch_records(c: &Connection) -> Vec<TestRecord> {
     }).collect()
 }
 
-pub fn delete_record(c: &Connection, id: i32) {
-    execute(c, "delete from test_table where id = $1", &[&id]);
-}
-
 pub fn update_record(c: &Connection, new_record: TestRecord) {
     execute(c, "update test_table set name = $2 where id = $1", &[
         &new_record.id,

@@ -5,7 +5,6 @@ mod utils;
 
 use rustc_serialize::json::Json;
 use utils::{
-    delete_record,
     execute,
     fetch_records,
     fetch_updates,
@@ -41,7 +40,7 @@ fn basic_insert() {
 fn basic_delete() {
     with_slot("test_table", "id int primary key, name text", |c| {
         execute(c, "insert into test_table (id, name) values ($1, $2)", &[&1, &"Michael Baker"]);
-        delete_record(c, 1);
+        execute(c, "delete from test_table", &[]);
         let updates = fetch_updates(c);
         assert_eq!(updates.len(), 2);
         let data = Json::from_str(&updates[1][..]).unwrap();
