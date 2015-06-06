@@ -96,20 +96,16 @@ pub extern fn pg_decode_change(ctx:      &LogicalDecodingContext,
         _ => { None },
     };
 
-    match change {
-        None    => {},
-        Some(c) => {
-            let output         = format!("{}", json::encode(&c).unwrap());
-            let c_tuple_string = CString::new(&output[..]).unwrap();
+    if let Some(c) = change {
+        let output         = format!("{}", json::encode(&c).unwrap());
+        let c_tuple_string = CString::new(&output[..]).unwrap();
 
-            unsafe {
-                OutputPluginPrepareWrite(ctx, true);
-                appendStringInfoString(ctx.out, c_tuple_string.as_ptr());
-                OutputPluginWrite(ctx, true);
-            }
+        unsafe {
+            OutputPluginPrepareWrite(ctx, true);
+            appendStringInfoString(ctx.out, c_tuple_string.as_ptr());
+            OutputPluginWrite(ctx, true);
         }
     }
-
 }
 
 
