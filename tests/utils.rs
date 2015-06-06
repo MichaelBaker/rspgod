@@ -32,7 +32,7 @@ pub fn drop_slot(c: &Connection) {
 }
 
 pub fn with_slot<F>(table_name: &str, columns: &str, f: F) where F:Fn(&Connection) -> () {
-    with_clean_database(table_name, columns, |c| {
+    with_table(table_name, columns, |c| {
         drop_slot(c);
         create_slot(c);
         f(c);
@@ -40,7 +40,7 @@ pub fn with_slot<F>(table_name: &str, columns: &str, f: F) where F:Fn(&Connectio
     });
 }
 
-pub fn with_clean_database<F>(table_name: &str, columns: &str, f: F) where F:Fn(&Connection) -> () {
+pub fn with_table<F>(table_name: &str, columns: &str, f: F) where F:Fn(&Connection) -> () {
     let c = connection();
     reset_database(&c, table_name, columns);
     f(&c);

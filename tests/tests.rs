@@ -5,20 +5,20 @@ mod utils;
 
 use rustc_serialize::json::Json;
 use utils::{
-    fetch_updates,
-    fetch_records,
-    with_slot,
-    with_clean_database,
-    execute,
     create_record,
-    update_record,
     delete_record,
+    execute,
+    fetch_records,
+    fetch_updates,
+    update_record,
+    with_slot,
+    with_table,
     TestRecord,
 };
 
 #[test]
 fn sanity_test() {
-    with_clean_database("test_table", "id int primary key, name text", |c| {
+    with_table("test_table", "id int primary key, name text", |c| {
         let records = vec![
             TestRecord { id: 1, name: "Michael Baker".to_string() },
             TestRecord { id: 2, name: "Josh Cheek".to_string()   },
