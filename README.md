@@ -34,9 +34,3 @@ Notes to self
 -------------
 
 * You must use `no_mangle`, `pub`, and `extern` in order for the rust function to be callable from C.
-
-Test Cases
-----------
-
-* Tables without a primary key
-* One column for every data type
