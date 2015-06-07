@@ -39,3 +39,4 @@ Todo
 ----
 
 * Add relation name to tuples
+* Add primary key to tuples
