@@ -67,8 +67,8 @@ pub extern fn pg_decode_change(ctx:      &LogicalDecodingContext,
             );
 
             match tuple {
-                Some(n) => { make_change(namespace, relation_name, ChangeType::Insert, None, Some(n), None) },
-                None    => { None },
+                Ok(n) => { make_change(namespace, relation_name, ChangeType::Insert, None, Some(n), None) },
+                _     => { None },
             }
         },
         REORDER_BUFFER_CHANGE_UPDATE => {
@@ -83,7 +83,7 @@ pub extern fn pg_decode_change(ctx:      &LogicalDecodingContext,
             );
 
             match (new_tuple, old_tuple) {
-                (Some(n), Some(o)) => { make_change(namespace, relation_name, ChangeType::Update, Some(o), Some(n), None) },
+                (Ok(n), Ok(o)) => { make_change(namespace, relation_name, ChangeType::Update, Some(o), Some(n), None) },
                 _ => { None },
             }
         },
@@ -94,8 +94,8 @@ pub extern fn pg_decode_change(ctx:      &LogicalDecodingContext,
             );
 
             match tuple {
-                Some(o) => { make_change(namespace, relation_name, ChangeType::Delete, Some(o), None, None) },
-                None    => { None },
+                Ok(o) => { make_change(namespace, relation_name, ChangeType::Delete, Some(o), None, None) },
+                _     => { None },
             }
         },
         _ => { None },

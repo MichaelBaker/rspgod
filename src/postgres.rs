@@ -1,5 +1,6 @@
 use std;
 use std::ffi::CStr;
+use std::str::{Utf8Error};
 use types::{
     to_bool,
     CFalse,
@@ -29,7 +30,7 @@ use postgres_bindings::{
 
 // For any datatypes that we don't know, this function converts them into a string
 // representation (which is always required by a datatype).
-pub fn datum_to_string(typid:Oid, datum:Datum) -> String {
+pub fn datum_to_string(typid:Oid, datum:Datum) -> Result<String, Utf8Error> {
     unsafe {
         let mut output_func = 0;
         let mut is_varlena  = CFalse;
@@ -48,12 +49,13 @@ pub fn datum_to_string(typid:Oid, datum:Datum) -> String {
 }
 
 // You cannot use the input string after you call this function because its memory will have been freed.
-pub fn pg_str_to_rs_str_and_free(pg_str: *mut i8) -> String {
+pub fn pg_str_to_rs_str_and_free(pg_str: *mut i8) -> Result<String, Utf8Error> {
     unsafe {
       let slice   = CStr::from_ptr(pg_str);
       let to_free = std::mem::transmute(pg_str);
       pfree(to_free);
-      std::str::from_utf8(slice.to_bytes()).unwrap().to_string()
+      let slice = try!(std::str::from_utf8(slice.to_bytes()));
+      Ok(slice.to_string())
     }
 }
 
@@ -75,7 +77,7 @@ pub fn attribute(description:TupleDesc, attribute_number:isize) -> Struct_FormDa
     unsafe { **raw_desc.attrs.offset(attribute_number) }
 }
 
-pub fn type_name(pg_attribute:Struct_FormData_pg_attribute) -> String {
+pub fn type_name(pg_attribute:Struct_FormData_pg_attribute) -> Result<String, Utf8Error> {
     unsafe { pg_str_to_rs_str_and_free(format_type_be(pg_attribute.atttypid)) }
 }
 
@@ -90,9 +92,9 @@ pub fn datum(tuple:HeapTuple, description:TupleDesc, attribute_number: i32) -> O
     }
 }
 
-pub fn pg_tuple_to_rspgod_tuple(description:TupleDesc, heap:*mut ReorderBufferTupleBuf) -> Option<Tuple> {
+pub fn pg_tuple_to_rspgod_tuple(description:TupleDesc, heap:*mut ReorderBufferTupleBuf) -> Result<Tuple, String> {
     if heap.is_null() {
-        return None;
+        return Err("pg_typel_to_rspgod_tuple: Tuple buffer is null".to_string());
     }
 
     let tuple            = unsafe { &mut (*heap).tuple };
@@ -103,7 +105,10 @@ pub fn pg_tuple_to_rspgod_tuple(description:TupleDesc, heap:*mut ReorderBufferTu
     for n in 0..num_attributes {
         let pg_attribute = attribute(description, n as isize);
         let name         = parse_attname(pg_attribute.attname.data);
-        let type_name    = type_name(pg_attribute);
+        let type_name    = match type_name(pg_attribute) {
+            Ok(name) => { name },
+            Err(e)   => { return Err(e.to_string()); }
+        };
 
         match datum(tuple, description, n as i32) {
             None => {
@@ -114,16 +119,21 @@ pub fn pg_tuple_to_rspgod_tuple(description:TupleDesc, heap:*mut ReorderBufferTu
               });
             },
             Some(d) => {
-                fields.push(Field {
-                    name:     name.clone(),
-                    value:    Some(datum_to_string(pg_attribute.atttypid, d)),
-                    datatype: type_name,
-                });
+                match datum_to_string(pg_attribute.atttypid, d) {
+                    Err(e)    => { return Err(e.to_string()); },
+                    Ok(value) => {
+                        fields.push(Field {
+                            name:     name.clone(),
+                            value:    Some(value),
+                            datatype: type_name,
+                        });
+                    },
+                }
             }
         }
     }
 
-    Some(fields)
+    Ok(fields)
 }
 
 pub fn get_namespace(relation:Relation) -> String {
