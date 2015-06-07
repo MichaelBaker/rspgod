@@ -20,8 +20,12 @@ struct varlena* macrowrap_PG_DETOAST_DATUM(Datum datum) {
   return PG_DETOAST_DATUM(datum);
 }
 
-Oid macrowrap_RelationGetNamespace(Relation rel) {
-  return RelationGetNamespace(rel);
+Oid macrowrap_RelationGetNamespace(Relation relation) {
+  return RelationGetNamespace(relation);
+}
+
+char *macrowrap_RelationGetRelationName(Relation relation) {
+  return RelationGetRelationName(relation);
 }
 
 // The C interface PG calls, just calls into our Rust

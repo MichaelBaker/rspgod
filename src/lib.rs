@@ -23,6 +23,7 @@ use types::{
 use postgres::{
     pg_tuple_to_rspgod_tuple,
     get_namespace,
+    get_relation_name,
 };
 
 use postgres_bindings::{
@@ -55,7 +56,8 @@ pub extern fn pg_decode_change(ctx:      &LogicalDecodingContext,
                                relation: Relation,
                                change:   &mut ReorderBufferChange) {
 
-    let namespace = get_namespace(relation);
+    let namespace     = get_namespace(relation);
+    let relation_name = get_relation_name(relation);
 
     let change = match change.action {
         REORDER_BUFFER_CHANGE_INSERT => {
@@ -65,7 +67,7 @@ pub extern fn pg_decode_change(ctx:      &LogicalDecodingContext,
             );
 
             match tuple {
-                Some(n) => { make_change(namespace, ChangeType::Insert, None, Some(n), None) },
+                Some(n) => { make_change(namespace, relation_name, ChangeType::Insert, None, Some(n), None) },
                 None    => { None },
             }
         },
@@ -81,7 +83,7 @@ pub extern fn pg_decode_change(ctx:      &LogicalDecodingContext,
             );
 
             match (new_tuple, old_tuple) {
-                (Some(n), Some(o)) => { make_change(namespace, ChangeType::Update, Some(o), Some(n), None) },
+                (Some(n), Some(o)) => { make_change(namespace, relation_name, ChangeType::Update, Some(o), Some(n), None) },
                 _ => { None },
             }
         },
@@ -92,7 +94,7 @@ pub extern fn pg_decode_change(ctx:      &LogicalDecodingContext,
             );
 
             match tuple {
-                Some(o) => { make_change(namespace, ChangeType::Delete, Some(o), None, None) },
+                Some(o) => { make_change(namespace, relation_name, ChangeType::Delete, Some(o), None, None) },
                 None    => { None },
             }
         },
@@ -123,9 +125,15 @@ pub extern fn pg_decode_begin_txn(ctx: &LogicalDecodingContext, txn: &ReorderBuf
 pub extern fn pg_decode_shutdown(ctx: &LogicalDecodingContext) {
 }
 
-fn make_change(namespace:String, change_type:ChangeType, old_row:Option<Tuple>, new_row:Option<Tuple>, debug:Option<String>) -> Option<Change> {
+fn make_change(namespace:     String,
+               relation_name: String,
+               change_type:   ChangeType,
+               old_row:       Option<Tuple>,
+               new_row:       Option<Tuple>,
+               debug:         Option<String>) -> Option<Change> {
     Some(Change {
         namespace:     namespace,
+        relation_name: relation_name,
         change_type:   change_type,
         old_row:       old_row,
         new_row:       new_row,

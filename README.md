@@ -34,10 +34,12 @@ Notes to self
 -------------
 
 * You must use `no_mangle`, `pub`, and `extern` in order for the rust function to be callable from C.
-* To print out the JSON of an update for inspection, use `use rustc_serialize::json::{as_pretty_json};` and `println!("{}", as_pretty_json(&fetch_updates(c)));`
+* To print out the JSON of an update for inspection, use
+
+`use rustc_serialize::json::{as_pretty_json};`
+`println!("{}", as_pretty_json(&fetch_updates(c)));`
 
 Todo
 ----
 
-* Add relation name to tuples
 * Add primary key to tuples

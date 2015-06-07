@@ -14,6 +14,7 @@ use postgres_bindings::{
     macrowrap_PG_DETOAST_DATUM,
     macrowrap_PointerGetDatum,
     macrowrap_RelationGetNamespace,
+    macrowrap_RelationGetRelationName,
     macrowrap_heap_getattr,
     pfree,
     Datum,
@@ -42,16 +43,23 @@ pub fn datum_to_string(typid:Oid, datum:Datum) -> String {
             datum
         };
 
-        pg_str_to_rs_str(OidOutputFunctionCall(output_func, real_datum))
+        pg_str_to_rs_str_and_free(OidOutputFunctionCall(output_func, real_datum))
     }
 }
 
 // You cannot use the input string after you call this function because its memory will have been freed.
-pub fn pg_str_to_rs_str(pg_str: *mut i8) -> String {
+pub fn pg_str_to_rs_str_and_free(pg_str: *mut i8) -> String {
     unsafe {
       let slice   = CStr::from_ptr(pg_str);
       let to_free = std::mem::transmute(pg_str);
       pfree(to_free);
+      std::str::from_utf8(slice.to_bytes()).unwrap().to_string()
+    }
+}
+
+pub fn pg_str_to_rs_str(pg_str: *mut i8) -> String {
+    unsafe {
+      let slice = CStr::from_ptr(pg_str);
       std::str::from_utf8(slice.to_bytes()).unwrap().to_string()
     }
 }
@@ -68,7 +76,7 @@ pub fn attribute(description:TupleDesc, attribute_number:isize) -> Struct_FormDa
 }
 
 pub fn type_name(pg_attribute:Struct_FormData_pg_attribute) -> String {
-    unsafe { pg_str_to_rs_str(format_type_be(pg_attribute.atttypid)) }
+    unsafe { pg_str_to_rs_str_and_free(format_type_be(pg_attribute.atttypid)) }
 }
 
 pub fn datum(tuple:HeapTuple, description:TupleDesc, attribute_number: i32) -> Option<Datum> {
@@ -121,4 +129,9 @@ pub fn pg_tuple_to_rspgod_tuple(description:TupleDesc, heap:*mut ReorderBufferTu
 pub fn get_namespace(relation:Relation) -> String {
     let c_namespace = unsafe { get_namespace_name(macrowrap_RelationGetNamespace(relation)) };
     pg_str_to_rs_str(c_namespace)
+}
+
+pub fn get_relation_name(relation:Relation) -> String {
+    let c_relation_name = unsafe { macrowrap_RelationGetRelationName(relation) };
+    pg_str_to_rs_str(c_relation_name)
 }

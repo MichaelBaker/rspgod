@@ -1,6 +1,7 @@
 #[derive(RustcDecodable, RustcEncodable, Debug)]
 pub struct Change {
     pub namespace:     String,
+    pub relation_name: String,
     pub change_type:   ChangeType,
     pub new_row:       Option<Tuple>,
     pub old_row:       Option<Tuple>,
