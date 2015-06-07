@@ -26,9 +26,14 @@ Building
   export PG_INCLUDE_DIR=/usr/local/Cellar/postgresql/9.4.1/include/server/
   export BINDGEN=/Users/josh/deleteme/rust-bindgen/target/debug/bindgen
   ```
+* You will also need a ruby interpreter installed
 * Then you can generate the Postgres library bindings with `script/import`
 * Then you can build the project with `script/build`
 
+Testing
+-------
+* You need to set one environment variable `POSTGRES_URL`. This should be a postgres connection string to a database that you've already created for testing purposes. e.g. `postgres://michaeltbaker@localhost:5432/test`
+* Then you can run the automated tests with script/test
 
 Notes to self
 -------------
@@ -46,3 +51,5 @@ Todo
 
 * Add primary key to tuples
 * Figure out some scheme for error handling
+* Use the Postgres include dir in the Makefile
+* Automatically source a `.env` file in build and test scripts if it is present. This should make configuration of this project easier.
