@@ -111,6 +111,8 @@ fn works_with_all_datatypes() {
 
     with_slot("datatypes", columns, |c| {
         execute(c, &format!("insert into datatypes values ({})", values)[..], &[]);
-        assert_eq!(fetch_updates(c).len(), 1);
+        execute(c, "update datatypes set id = 2", &[]);
+        execute(c, "delete from datatypes", &[]);
+        assert_eq!(fetch_updates(c).len(), 3);
     });
 }
