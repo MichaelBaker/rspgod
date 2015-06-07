@@ -17,6 +17,7 @@ pub mod types;
 use types::{
     Change,
     ChangeType,
+    Tuple,
 };
 
 use postgres::{
@@ -61,14 +62,7 @@ pub extern fn pg_decode_change(ctx:      &LogicalDecodingContext,
             );
 
             match tuple {
-                Some(t) => {
-                    Some(Change {
-                        change_type:   ChangeType::Insert,
-                        new_row:       Some(t),
-                        old_row:       None,
-                        debug_message: None,
-                    })
-                },
+                Some(n) => { make_change(ChangeType::Insert, None, Some(n), None) },
                 None    => { None },
             }
         },
@@ -84,14 +78,7 @@ pub extern fn pg_decode_change(ctx:      &LogicalDecodingContext,
             );
 
             match (new_tuple, old_tuple) {
-                (Some(n), Some(o)) => {
-                    Some(Change {
-                        change_type:   ChangeType::Update,
-                        new_row:       Some(n),
-                        old_row:       Some(o),
-                        debug_message: None,
-                    })
-                },
+                (Some(n), Some(o)) => { make_change(ChangeType::Update, Some(o), Some(n), None) },
                 _ => { None },
             }
         },
@@ -102,14 +89,7 @@ pub extern fn pg_decode_change(ctx:      &LogicalDecodingContext,
             );
 
             match tuple {
-                Some(t) => {
-                    Some(Change {
-                        change_type:   ChangeType::Delete,
-                        old_row:       Some(t),
-                        new_row:       None,
-                        debug_message: None,
-                    })
-                },
+                Some(o) => { make_change(ChangeType::Delete, Some(o), None, None) },
                 None    => { None },
             }
         },
@@ -128,8 +108,6 @@ pub extern fn pg_decode_change(ctx:      &LogicalDecodingContext,
     }
 }
 
-
-
 #[no_mangle]
 pub extern fn pg_decode_commit_txn(ctx: &LogicalDecodingContext, txn: &ReorderBufferTXN, commit_lsn: u64) {
 }
@@ -140,4 +118,13 @@ pub extern fn pg_decode_begin_txn(ctx: &LogicalDecodingContext, txn: &ReorderBuf
 
 #[no_mangle]
 pub extern fn pg_decode_shutdown(ctx: &LogicalDecodingContext) {
+}
+
+fn make_change(change_type:ChangeType, old_row:Option<Tuple>, new_row:Option<Tuple>, debug:Option<String>) -> Option<Change> {
+    Some(Change {
+        change_type:   change_type,
+        old_row:       old_row,
+        new_row:       new_row,
+        debug_message: debug,
+    })
 }
