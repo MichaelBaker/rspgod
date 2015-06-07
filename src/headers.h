@@ -14,3 +14,4 @@ Datum macrowrap_heap_getattr(
 
 Datum macrowrap_PointerGetDatum(void* datum);
 struct varlena* macrowrap_PG_DETOAST_DATUM(Datum datum);
+Oid macrowrap_RelationGetNamespace(Relation rel);

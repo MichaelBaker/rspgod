@@ -10,8 +10,10 @@ use types::{
 use postgres_bindings::{
     format_type_be,
     getTypeOutputInfo,
+    get_namespace_name,
     macrowrap_PG_DETOAST_DATUM,
     macrowrap_PointerGetDatum,
+    macrowrap_RelationGetNamespace,
     macrowrap_heap_getattr,
     pfree,
     Datum,
@@ -21,6 +23,7 @@ use postgres_bindings::{
     Struct_FormData_pg_attribute,
     TupleDesc,
     ReorderBufferTupleBuf,
+    Relation,
 };
 
 // For any datatypes that we don't know, this function converts them into a string
@@ -113,4 +116,9 @@ pub fn pg_tuple_to_rspgod_tuple(description:TupleDesc, heap:*mut ReorderBufferTu
     }
 
     Some(fields)
+}
+
+pub fn get_namespace(relation:Relation) -> String {
+    let c_namespace = unsafe { get_namespace_name(macrowrap_RelationGetNamespace(relation)) };
+    pg_str_to_rs_str(c_namespace)
 }
