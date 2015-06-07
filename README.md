@@ -45,3 +45,4 @@ Todo
 ----
 
 * Add primary key to tuples
+* Figure out some scheme for error handling
