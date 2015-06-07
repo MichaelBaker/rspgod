@@ -16,6 +16,7 @@ pub mod types;
 
 use types::{
     Change,
+    ChangeType,
 };
 
 use postgres::{
@@ -60,7 +61,14 @@ pub extern fn pg_decode_change(ctx:      &LogicalDecodingContext,
             );
 
             match tuple {
-                Some(t) => { Some(Change::Insert { new_row: t }) },
+                Some(t) => {
+                    Some(Change {
+                        change_type:   ChangeType::Insert,
+                        new_row:       Some(t),
+                        old_row:       None,
+                        debug_message: None,
+                    })
+                },
                 None    => { None },
             }
         },
@@ -77,7 +85,12 @@ pub extern fn pg_decode_change(ctx:      &LogicalDecodingContext,
 
             match (new_tuple, old_tuple) {
                 (Some(n), Some(o)) => {
-                    Some(Change::Update { new_row: n, old_row: o })
+                    Some(Change {
+                        change_type:   ChangeType::Update,
+                        new_row:       Some(n),
+                        old_row:       Some(o),
+                        debug_message: None,
+                    })
                 },
                 _ => { None },
             }
@@ -89,7 +102,14 @@ pub extern fn pg_decode_change(ctx:      &LogicalDecodingContext,
             );
 
             match tuple {
-                Some(t) => { Some(Change::Delete { old_row: t }) },
+                Some(t) => {
+                    Some(Change {
+                        change_type:   ChangeType::Delete,
+                        old_row:       Some(t),
+                        new_row:       None,
+                        debug_message: None,
+                    })
+                },
                 None    => { None },
             }
         },

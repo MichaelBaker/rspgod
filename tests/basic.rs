@@ -20,9 +20,9 @@ fn basic_insert() {
         execute(c, "insert into test_table (id, name) values ($1, $2)", &[&1, &"Michael Baker"]);
         let updates = fetch_updates(c);
         assert_eq!(updates.len(), 1);
-        let change = updates[0].as_object().unwrap();
-        let variant = change.get("variant").unwrap().as_string().unwrap();
-        assert_eq!(variant, "Insert");
+        let change      = updates[0].as_object().unwrap();
+        let change_type = change.get("change_type").unwrap().as_string().unwrap();
+        assert_eq!(change_type, "Insert");
     });
 }
 
@@ -33,9 +33,9 @@ fn basic_delete() {
         execute(c, "delete from test_table", &[]);
         let updates = fetch_updates(c);
         assert_eq!(updates.len(), 2);
-        let change = updates[1].as_object().unwrap();
-        let variant = change.get("variant").unwrap().as_string().unwrap();
-        assert_eq!(variant, "Delete");
+        let change      = updates[1].as_object().unwrap();
+        let change_type = change.get("change_type").unwrap().as_string().unwrap();
+        assert_eq!(change_type, "Delete");
     });
 }
 
@@ -46,8 +46,8 @@ fn basic_update() {
         execute(c, "update test_table set name = 'Bichael Maker'", &[]);
         let updates = fetch_updates(c);
         assert_eq!(updates.len(), 2);
-        let change = updates[1].as_object().unwrap();
-        let variant = change.get("variant").unwrap().as_string().unwrap();
-        assert_eq!(variant, "Update");
+        let change      = updates[1].as_object().unwrap();
+        let change_type = change.get("change_type").unwrap().as_string().unwrap();
+        assert_eq!(change_type, "Update");
     });
 }

@@ -1,10 +1,17 @@
 #[derive(RustcDecodable, RustcEncodable, Debug)]
-pub enum Change {
-    Insert  { new_row:  Tuple },
-    Delete  { old_row:  Tuple },
-    Update  { old_row:  Tuple, new_row: Tuple },
-    Unknown { whatever: String },
-    Debug   { message:  String },
+pub struct Change {
+    pub change_type:   ChangeType,
+    pub new_row:       Option<Tuple>,
+    pub old_row:       Option<Tuple>,
+    pub debug_message: Option<String>,
+}
+
+#[derive(RustcDecodable, RustcEncodable, Debug)]
+pub enum ChangeType {
+    Insert,
+    Delete,
+    Update,
+    Error
 }
 
 pub type Tuple = Vec<Field>;

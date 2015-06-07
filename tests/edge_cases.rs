@@ -4,8 +4,6 @@ use utils::{
     with_slot,
 };
 
-use rustc_serialize::json::{as_pretty_json};
-
 #[test]
 // The output decoder does not emit any changes for deletions from a table without a primary key.
 // This is because Postgres doesn't give the decoder any tuple information in this scenario.
