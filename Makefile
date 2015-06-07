@@ -1,4 +1,4 @@
-MODULE_big = thingy
+MODULE_big = rspgod-v1
 OBJS = plugin.o target/debug/librspgod.a
 
 plugin.o: src/plugin.c target/debug/librspgod.a

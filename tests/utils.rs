@@ -22,7 +22,7 @@ pub fn fetch_updates(c: &Connection) -> Vec<Json> {
 }
 
 pub fn create_slot(c: &Connection) {
-    execute(c, "select * from pg_create_logical_replication_slot('slot', 'thingy')", &[]);
+    execute(c, "select * from pg_create_logical_replication_slot('slot', 'rspgod-v1')", &[]);
 }
 
 pub fn drop_slot(c: &Connection) {
