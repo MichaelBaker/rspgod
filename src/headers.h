@@ -4,6 +4,8 @@
 #include "utils/lsyscache.h"
 #include "replication/logical.h"
 #include "replication/output_plugin.h"
+#include "access/heapam.h"
+#include "storage/lock.h"
 
 Datum macrowrap_heap_getattr(
     HeapTuple tup,

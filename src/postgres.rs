@@ -18,6 +18,9 @@ use postgres_bindings::{
     macrowrap_RelationGetRelationName,
     macrowrap_heap_getattr,
     pfree,
+    list_free,
+    relation_close,
+    relation_open,
     Datum,
     HeapTuple,
     Oid,
@@ -26,7 +29,24 @@ use postgres_bindings::{
     TupleDesc,
     ReorderBufferTupleBuf,
     Relation,
+    RelationGetReplicaIndex,
+    RelationGetIndexList,
 };
+
+const NoLock:                   ::libc::c_int = 0;
+const AccessShareLock:          ::libc::c_int = 1;
+const RowShareLock:             ::libc::c_int = 2;
+const RowExclusiveLock:         ::libc::c_int = 3;
+const ShareUpdateExclusiveLock: ::libc::c_int = 4;
+const ShareLock:                ::libc::c_int = 5;
+const ShareRowExclusiveLock:    ::libc::c_int = 6;
+const ExclusiveLock:            ::libc::c_int = 7;
+const AccessExclusiveLock:      ::libc::c_int = 8;
+
+const REPLICA_IDENTITY_DEFAULT: ::libc::c_char = 'd' as i8;
+const REPLICA_IDENTITY_NOTHING: ::libc::c_char = 'n' as i8;
+const REPLICA_IDENTITY_FULL:    ::libc::c_char = 'f' as i8;
+const REPLICA_IDENTITY_INDEX:   ::libc::c_char = 'i' as i8;
 
 pub fn pg_tuple_to_rspgod_tuple(description:TupleDesc, heap:*mut ReorderBufferTupleBuf) -> Result<Tuple, String> {
     if heap.is_null() {
@@ -81,6 +101,59 @@ pub fn get_namespace(relation:Relation) -> String {
 pub fn get_relation_name(relation:Relation) -> String {
     let c_relation_name = unsafe { macrowrap_RelationGetRelationName(relation) };
     pg_str_to_rs_str(c_relation_name)
+}
+
+pub fn get_primary_key(relation:Relation) -> Option<String> {
+    match get_primary_key_relation(relation) {
+        None => { None },
+        Some(primary_key_relation) => {
+            // TODO: Get the data here
+            None
+        },
+    }
+}
+
+fn get_primary_key_relation(relation:Relation) -> Option<Relation> {
+    unsafe {
+        let replica_identity_type = (*(*relation).rd_rel).relreplident;
+
+        if replica_identity_type == REPLICA_IDENTITY_NOTHING {
+            return None;
+        }
+
+        if replica_identity_type == REPLICA_IDENTITY_INDEX {
+            let replica_index_oid = RelationGetReplicaIndex(relation);
+            if replica_index_oid != (0 as Oid) {
+                return Some(relation_open(replica_index_oid, AccessShareLock));
+            }
+        }
+
+        let indexes       = RelationGetIndexList(relation);
+        let mut index_oid = if indexes.is_null() {
+            return None;
+        } else {
+            (*indexes).head
+        };
+
+
+        loop {
+            if index_oid.is_null() {
+                list_free(indexes);
+                return None;
+            }
+
+            let index_relation = relation_open(*(*index_oid).data.oid_value(), AccessShareLock);
+            let index          = *(*index_relation).rd_index;
+
+            if to_bool(index.indisvalid) && to_bool(index.indisready) && to_bool(index.indisprimary) {
+                list_free(indexes);
+                return Some(index_relation);
+            }
+
+            relation_close(index_relation, AccessShareLock);
+            index_oid = (*index_oid).next;
+        }
+    }
 }
 
 // For any datatypes that we don't know, this function converts them into a string

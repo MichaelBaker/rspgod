@@ -50,6 +50,14 @@ Todo
 ----
 
 * Add primary key to tuples
+    * Use `get_primary_key_relation` to retrieve the primary key columns
 * Figure out some scheme for error handling
 * Use the Postgres include dir in the Makefile
 * Automatically source a `.env` file in build and test scripts if it is present. This should make configuration of this project easier.
+* Create tests for all replica identity modes
+  * REPLICA_IDENTITY_INDEX
+  * REPLICA_IDENTITY_FULL
+  * REPLICA_IDENTITY_NOTHING
+  * REPLICA_IDENTITY_DEFAULT
+* Test what happens when `if (repl_ident_oid != InvalidOid)` is false
+* Make more fine-grained/safer implementation of `get_primary_key_relation`
